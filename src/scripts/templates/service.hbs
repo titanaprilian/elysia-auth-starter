@@ -1,0 +1,39 @@
+import { prisma } from "@/libs/prisma";
+import type {
+  Create{{capitalize name}}Input,
+  Update{{capitalize name}}Input,
+} from "./schema";
+
+export abstract class {{capitalize name}}Service {
+  static async get{{capitalize name}}s() {
+    return prisma.{{lowercase name}}.findMany();
+  }
+
+  static async get{{capitalize name}}(id: string) {
+    return prisma.{{lowercase name}}.findUnique({
+      where: { id },
+    });
+  }
+
+  static async create{{capitalize name}}(data: Create{{capitalize name}}Input) {
+    return prisma.{{lowercase name}}.create({
+      data,
+    });
+  }
+
+  static async update{{capitalize name}}(
+    id: string,
+    data: Update{{capitalize name}}Input
+  ) {
+    return prisma.{{lowercase name}}.update({
+      where: { id },
+      data,
+    });
+  }
+
+  static async delete{{capitalize name}}(id: string) {
+    return prisma.{{lowercase name}}.delete({
+      where: { id },
+    });
+  }
+}
