@@ -5,7 +5,7 @@ import type {
   CreateFeatureInput,
   UpdateFeatureInput,
 } from "./schema";
-import { DeleteSystemError } from "./error";
+import { DeleteSystemError, InvalidFeatureIdError } from "./error";
 import { Prisma } from "@generated/prisma";
 
 // 🔒 Define system critical features and roles that cannot be touched
@@ -115,10 +115,16 @@ export const RbacService = {
   },
 
   updateFeature: async (id: string, data: UpdateFeatureInput) => {
-    return await prisma.feature.update({
+    const updatedFeature = await prisma.feature.update({
       where: { id },
       data,
     });
+
+    return {
+      ...updatedFeature,
+      createdAt: updatedFeature.createdAt.toISOString(),
+      updatedAt: updatedFeature.updatedAt.toISOString(),
+    };
   },
 
   deleteFeature: async (id: string) => {
@@ -130,9 +136,15 @@ export const RbacService = {
       throw new DeleteSystemError();
     }
 
-    return await prisma.feature.delete({
+    const deletedFreature = await prisma.feature.delete({
       where: { id },
     });
+
+    return {
+      ...deletedFreature,
+      createdAt: deletedFreature.createdAt.toISOString(),
+      updatedAt: deletedFreature.updatedAt.toISOString(),
+    };
   },
 
   /**
@@ -204,8 +216,62 @@ export const RbacService = {
     };
   },
 
+  getRoleOptions: async (params: {
+    page: number;
+    limit: number;
+    search?: string;
+  }) => {
+    const { page, limit, search } = params;
+    const where: Prisma.RoleWhereInput = {};
+
+    if (search) {
+      where.name = { contains: search };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [roles, total] = await prisma.$transaction([
+      prisma.role.findMany({
+        where,
+        select: { id: true, name: true },
+        skip,
+        take: limit,
+        orderBy: { name: "asc" },
+      }),
+      prisma.role.count({ where }),
+    ]);
+
+    return {
+      roles,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  },
+
   createRole: async (data: CreateRoleInput) => {
     return await prisma.$transaction(async (tx) => {
+      // Validate featureIds if permissions are provided
+      if (data.permissions && data.permissions.length > 0) {
+        const featureIds = data.permissions.map((p) => p.featureId);
+        const existingFeatures = await tx.feature.findMany({
+          where: { id: { in: featureIds } },
+          select: { id: true },
+        });
+        const existingFeatureIds = new Set(existingFeatures.map((f) => f.id));
+        const invalidFeatureIds = featureIds.filter(
+          (id) => !existingFeatureIds.has(id),
+        );
+        if (invalidFeatureIds.length > 0) {
+          throw new InvalidFeatureIdError(
+            "Invalid featureId(s): " + invalidFeatureIds.join(", "),
+          );
+        }
+      }
+
       // Create the Role first
       const role = await tx.role.create({
         data: {
@@ -295,7 +361,7 @@ export const RbacService = {
         }
       }
 
-      return await tx.role.findUniqueOrThrow({
+      const updatedRole = await tx.role.findUniqueOrThrow({
         where: { id },
         include: {
           permissions: {
@@ -303,6 +369,12 @@ export const RbacService = {
           },
         },
       });
+
+      return {
+        ...updatedRole,
+        createdAt: updatedRole.createdAt.toISOString(),
+        updatedAt: updatedRole.updatedAt.toISOString(),
+      };
     });
   },
 
@@ -315,8 +387,14 @@ export const RbacService = {
       throw new DeleteSystemError();
     }
 
-    return await prisma.role.delete({
+    const deletedRole = await prisma.role.delete({
       where: { id },
     });
+
+    return {
+      ...deletedRole,
+      createdAt: deletedRole.createdAt.toISOString(),
+      updatedAt: deletedRole.updatedAt.toISOString(),
+    };
   },
 };

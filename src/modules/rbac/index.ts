@@ -5,6 +5,7 @@ import {
   CreateRoleSchema,
   FeatureParamSchema,
   GetFeaturesQuerySchema,
+  GetRolesOptionsQuerySchema,
   GetRolesQuerySchema,
   RoleParamSchema,
   UpdateFeatureSchema,
@@ -14,7 +15,7 @@ import { errorResponse, successResponse } from "@/libs/response";
 import { createBaseApp, createProtectedApp } from "@/libs/base";
 import { hasPermission } from "@/middleware/permission";
 import { Prisma } from "@generated/prisma";
-import { DeleteSystemError } from "./error";
+import { DeleteSystemError, InvalidFeatureIdError } from "./error";
 
 const FEATURE_NAME = "RBAC_management";
 
@@ -138,6 +139,34 @@ const protectedRbac = createProtectedApp()
       },
     },
   )
+  .get(
+    "/roles/options",
+    async ({ query, set }) => {
+      const { page, limit, search } = query;
+      const { roles, pagination } = await RbacService.getRoleOptions({
+        page: Number(page) || 1,
+        limit: Number(limit) || 10,
+        search: search as string | undefined,
+      });
+      return successResponse(
+        set,
+        roles,
+        "Roles options retrieved successfully",
+        200,
+        {
+          pagination,
+        },
+      );
+    },
+    {
+      query: GetRolesOptionsQuerySchema,
+      beforeHandle: hasPermission(FEATURE_NAME, "read"),
+      response: {
+        200: RbacModel.getRoleOptions,
+        500: RbacModel.error,
+      },
+    },
+  )
   .post(
     "/roles",
     async ({ body, set }) => {
@@ -249,6 +278,10 @@ export const rbac = createBaseApp({ tags: ["RBAC"] }).group("/rbac", (app) =>
           403,
           "Operation Forbidden: This is a protected system feature and cannot be deleted.",
         );
+      }
+
+      if (error instanceof InvalidFeatureIdError) {
+        return errorResponse(set, 400, error.message);
       }
     })
     .use(protectedRbac),

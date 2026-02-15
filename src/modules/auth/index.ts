@@ -8,11 +8,24 @@ import { parseDuration } from "@/utils/time";
 import { authRateLimit } from "@/plugins/rate-limit";
 import { createBaseApp, createProtectedApp } from "@/libs/base";
 
-/**
- * PUBLIC ROUTES
- * These do NOT require an Access Token header.
- * They rely on Credentials (Login) or Refresh Tokens (Refresh/Logout).
- */
+const REFRESH_TOKEN_MAX_AGE = parseDuration(env.JWT_REFRESH_EXPIRES_IN || "7d");
+
+const isProduction = env.NODE_ENV === "production";
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? ("none" as const) : ("lax" as const),
+  path: "/",
+  domain: isProduction ? undefined : undefined,
+};
+
+const secureCookieOptions = {
+  httpOnly: true,
+  secure: true,
+  sameSite: isProduction ? ("none" as const) : ("lax" as const),
+  path: "/",
+};
 const publicAuth = createBaseApp()
   .use(authRateLimit)
   .use(accessJwt)
@@ -41,11 +54,8 @@ const publicAuth = createBaseApp()
 
       cookie.refresh_token.set({
         value: refreshToken,
-        httpOnly: true,
-        secure: env.NODE_ENV === "production",
-        sameSite: "strict",
-        path: "/auth",
-        maxAge: parseDuration(env.JWT_REFRESH_EXPIRES_IN || "7d"),
+        ...cookieOptions,
+        maxAge: REFRESH_TOKEN_MAX_AGE,
       });
 
       return successResponse(
@@ -116,11 +126,8 @@ const publicAuth = createBaseApp()
 
       cookie.refresh_token.set({
         value: newRefreshToken,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        path: "/auth",
-        maxAge: parseDuration(env.JWT_REFRESH_EXPIRES_IN || "7d"),
+        ...cookieOptions,
+        maxAge: REFRESH_TOKEN_MAX_AGE,
       });
 
       return successResponse(
@@ -164,10 +171,7 @@ const publicAuth = createBaseApp()
 
       cookie.refresh_token.set({
         value: "",
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        path: "/auth",
+        ...secureCookieOptions,
         maxAge: 0,
       });
 
@@ -223,10 +227,7 @@ const protectedAuth = createProtectedApp()
 
       cookie.refresh_token.set({
         value: "",
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        path: "/auth",
+        ...secureCookieOptions,
         maxAge: 0,
       });
 

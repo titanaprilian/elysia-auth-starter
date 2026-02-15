@@ -62,6 +62,9 @@ export const GetRolesQuerySchema = PaginationSchema.extend({
   search: z.string().optional(),
   feature: z.string().optional(),
 });
+export const GetRolesOptionsQuerySchema = PaginationSchema.extend({
+  search: z.string().optional(),
+});
 
 export type CreateRoleInput = z.infer<typeof CreateRoleSchema>;
 export type CreateFeatureInput = z.infer<typeof CreateFeatureSchema>;
