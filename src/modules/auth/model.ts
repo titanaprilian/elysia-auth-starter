@@ -13,6 +13,18 @@ export const PublicUser = z.object({
 });
 
 /**
+ * Public user with role name
+ */
+export const PublicUserWithRole = z.object({
+  id: z.string(),
+  email: z.email(),
+  name: z.string(),
+  roleName: z.string(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+/**
  * Auth token response
  */
 export const AuthTokenResponse = z.object({
@@ -42,7 +54,7 @@ export const AuthModel = {
     }),
   ),
   logout: createResponseSchema(z.null()),
-  me: createResponseSchema(PublicUser),
+  me: createResponseSchema(PublicUserWithRole),
 
   error: createErrorSchema(z.null()),
   validationError: createErrorSchema(

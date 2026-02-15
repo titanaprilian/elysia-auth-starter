@@ -263,6 +263,11 @@ export abstract class AuthService {
         name: true,
         createdAt: true,
         updatedAt: true,
+        role: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -277,7 +282,10 @@ export abstract class AuthService {
 
     log.debug({ userId }, "User profile fetched");
     return {
-      ...user,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      roleName: user.role.name,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };

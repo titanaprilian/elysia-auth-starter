@@ -50,6 +50,21 @@ export const RoleOption = z.object({
   name: z.string(),
 });
 
+export const PermissionInfo = z.object({
+  featureId: z.string(),
+  featureName: z.string(),
+  canCreate: z.boolean(),
+  canRead: z.boolean(),
+  canUpdate: z.boolean(),
+  canDelete: z.boolean(),
+  canPrint: z.boolean(),
+});
+
+export const MyRoleResponse = z.object({
+  roleName: z.string(),
+  permissions: z.array(PermissionInfo),
+});
+
 export const RbacModel = {
   // --- FEATURES ---
   getFeatures: createPaginatedResponseSchema(z.array(PublicFeature)),
@@ -60,6 +75,7 @@ export const RbacModel = {
   // --- ROLES ---
   getRoles: createPaginatedResponseSchema(z.array(PublicRole)),
   getRoleOptions: createPaginatedResponseSchema(z.array(RoleOption)),
+  getMyRole: createResponseSchema(MyRoleResponse),
   createRole: createResponseSchema(PublicRole),
   updateRole: createResponseSchema(PublicRole),
 
@@ -96,6 +112,7 @@ export type RbacModelType = {
   // --- ROLES ---
   getRoles: z.infer<typeof RbacModel.getRoles>;
   getRoleOptions: z.infer<typeof RbacModel.getRoleOptions>;
+  getMyRole: z.infer<typeof RbacModel.getMyRole>;
   createRole: z.infer<typeof RbacModel.createRole>;
   updateRole: z.infer<typeof RbacModel.updateRole>;
   deleteRole: z.infer<typeof RbacModel.deleteRole>;

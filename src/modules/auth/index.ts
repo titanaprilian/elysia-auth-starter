@@ -255,6 +255,7 @@ const protectedAuth = createProtectedApp()
           id: data.id,
           email: data.email,
           name: data.name,
+          roleName: data.roleName,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
         },

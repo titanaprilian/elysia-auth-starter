@@ -3,6 +3,26 @@ import { openapi } from "@elysiajs/openapi";
 export const openapiPlugin = openapi({
   enabled: process.env.NODE_ENV !== "production",
   path: "/openapi",
+  scalar: {
+    customCss: `
+      /* Fix modal scrolling issue */
+      .swagger-modal .modal-body {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+      }
+      
+      /* Fix for Scalar UI - modal scrolling */
+      .scalar-modal__window {
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+      }
+      
+      .scalar-modal__body {
+        max-height: calc(90vh - 120px) !important;
+        overflow-y: auto !important;
+      }
+    `,
+  },
   documentation: {
     openapi: "3.0.3",
     info: {

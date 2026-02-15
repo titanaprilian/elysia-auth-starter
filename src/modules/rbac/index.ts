@@ -167,6 +167,19 @@ const protectedRbac = createProtectedApp()
       },
     },
   )
+  .get(
+    "/roles/me",
+    async ({ user, set }) => {
+      const myRole = await RbacService.getMyRole(user.id);
+      return successResponse(set, myRole, "My role retrieved successfully");
+    },
+    {
+      response: {
+        200: RbacModel.getMyRole,
+        500: RbacModel.error,
+      },
+    },
+  )
   .post(
     "/roles",
     async ({ body, set }) => {

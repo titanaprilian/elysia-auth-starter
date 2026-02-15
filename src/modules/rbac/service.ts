@@ -378,6 +378,36 @@ export const RbacService = {
     });
   },
 
+  getMyRole: async (userId: string) => {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: {
+                feature: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      roleName: user.role.name,
+      permissions: user.role.permissions.map((p) => ({
+        featureId: p.feature.id,
+        featureName: p.feature.name,
+        canCreate: p.canCreate,
+        canRead: p.canRead,
+        canUpdate: p.canUpdate,
+        canDelete: p.canDelete,
+        canPrint: p.canPrint,
+      })),
+    };
+  },
+
   deleteRole: async (id: string) => {
     const role = await prisma.role.findUniqueOrThrow({
       where: { id },
