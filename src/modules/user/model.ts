@@ -17,7 +17,13 @@ export const UserSafe = z.object({
 
 export const UserModel = {
   user: createResponseSchema(UserSafe),
-  users: createPaginatedResponseSchema(z.array(UserSafe)),
+  users: createPaginatedResponseSchema(
+    z.array(
+      UserSafe.extend({
+        roleName: z.string(),
+      }),
+    ),
+  ),
   deleteResult: createResponseSchema(UserSafe),
 
   error: createErrorSchema(z.null()),

@@ -118,6 +118,43 @@ describe("PATCH /users/:id", () => {
     expect(res.status).toBe(403);
   });
 
+  it.only("should return 403 if attempting to deactivate a SuperAdmin user", async () => {
+    const superAdminRole = await prisma.role.create({
+      data: { name: "SuperAdmin" },
+    });
+
+    const targetUser = await prisma.user.create({
+      data: {
+        name: "The Boss",
+        email: "boss@admin.com",
+        password: "hashed_password",
+        roleId: superAdminRole.id,
+        isActive: true,
+      },
+    });
+
+    const { authHeaders } = await createAuthenticatedUser();
+    await createTestRoleWithPermissions("TestUser", [
+      { featureName: "user_management", action: "update" },
+    ]);
+
+    const res = await app.handle(
+      new Request(`http://localhost/users/${targetUser.id}`, {
+        method: "PATCH",
+        headers: {
+          ...authHeaders,
+          "x-forwarded-for": randomIp(),
+        },
+        body: JSON.stringify({ isActive: false }),
+      }),
+    );
+
+    const body = await res.json();
+    expect(res.status).toBe(403);
+
+    expect(body.message).toMatch(/forbidden|superadmin/i);
+  });
+
   it("should update user name successfully", async () => {
     const { authHeaders } = await createAuthenticatedUser();
     await createTestRoleWithPermissions("TestUser", [

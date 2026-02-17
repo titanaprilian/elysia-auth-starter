@@ -546,7 +546,7 @@ describe("GET /users", () => {
     expect(body.data.every((u: any) => u.isActive === false)).toBe(true);
   });
 
-  it("should filter users by roleId", async () => {
+  it.only("should filter users by roleId", async () => {
     const { authHeaders } = await createAuthenticatedUser();
     await createTestRoleWithPermissions("TestUser", [
       { featureName: "user_management", action: "read" },
@@ -563,6 +563,9 @@ describe("GET /users", () => {
     expect(res.status).toBe(200);
     expect(body.data.length).toBeGreaterThan(0);
     expect(body.data.every((u: any) => u.roleId === roleEmployee.id)).toBe(
+      true,
+    );
+    expect(body.data.every((u: any) => u.roleName === roleEmployee.name)).toBe(
       true,
     );
   });

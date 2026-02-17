@@ -11,7 +11,7 @@ import { createBaseApp, createProtectedApp } from "@/libs/base";
 import { hasPermission } from "@/middleware/permission";
 import { Prisma } from "@generated/prisma";
 import { DeleteSystemError } from "../rbac/error";
-import { DeleteSelfError } from "./error";
+import { CreateSystemError, DeleteSelfError, UpdateSystemError } from "./error";
 
 const FEATURE_NAME = "user_management";
 
@@ -83,6 +83,8 @@ const protectedUser = createProtectedApp()
     "/:id",
     async ({ body, params, set }) => {
       const updatedUser = await UserService.updateUser(params.id, body);
+
+      console.log(updatedUser);
       return successResponse(
         set,
         updatedUser,
@@ -174,6 +176,22 @@ export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
           set,
           403,
           "Operation Forbidden: You cannot delete your own account",
+        );
+      }
+
+      if (error instanceof CreateSystemError) {
+        return errorResponse(
+          set,
+          403,
+          "Operation Forbidden: You cannot create user with SuperAdmin role more than one",
+        );
+      }
+
+      if (error instanceof UpdateSystemError) {
+        return errorResponse(
+          set,
+          403,
+          "Operation Forbidden: You cannot update user status to inactive with SuperAdmin role",
         );
       }
     })

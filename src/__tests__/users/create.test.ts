@@ -130,6 +130,47 @@ describe("POST /users", () => {
     expect(res.status).toBe(403);
   });
 
+  it("should return 403 if attempting to create a second SuperAdmin user", async () => {
+    const superAdminRole = await prisma.role.create({
+      data: { name: "SuperAdmin" },
+    });
+
+    await prisma.user.create({
+      data: {
+        name: "The Super Admin",
+        email: "super@admin.com",
+        password: "hashed_password",
+        roleId: superAdminRole.id,
+      },
+    });
+
+    const { authHeaders } = await createAuthenticatedUser();
+    await createTestRoleWithPermissions("TestUser", [
+      { featureName: "user_management", action: "create" },
+    ]);
+
+    const res = await app.handle(
+      new Request("http://localhost/users", {
+        method: "POST",
+        headers: { ...authHeaders, "x-forwarded-for": randomIp() },
+        body: JSON.stringify({
+          name: "Wannabe SuperAdmin",
+          email: "wannabe@example.com",
+          password: "Password123!",
+          roleId: superAdminRole.id, // This should trigger the error
+        }),
+      }),
+    );
+
+    // 5. Assertions
+    expect(res.status).toBe(403);
+
+    const body = await res.json();
+    expect(body.message).toBe(
+      "Operation Forbidden: You cannot create user with SuperAdmin role more than one",
+    );
+  });
+
   it("should create user successfully with valid permission", async () => {
     const { authHeaders } = await createAuthenticatedUser();
     await createTestRoleWithPermissions("TestUser", [
