@@ -76,10 +76,23 @@ bun run generate               # Run Plop scaffolding
 
 ### Logging
 
-- Use pino logger from `@/libs/logger`
-- Log levels: `debug` (dev details), `info` (key events), `warn` (expected failures), `error` (exceptions)
-- Include context objects: `log.info({ userId, email }, "message")`
-- Never log passwords, tokens, or sensitive data
+- **Log in the Service Layer** - All logging must be implemented in the service layer (see `src/modules/auth/service.ts` as reference)
+- Use pino logger from `@/libs/logger` - inject via method parameter: `log: Logger`
+- Log levels:
+  - `debug`: Method entry, operation details, parameter values
+  - `info`: Successful operations (creation, updates, deletions), counts of retrieved data
+  - `warn`: Security blocks, validation failures, unauthorized attempts
+  - `error`: System errors, database failures, unexpected exceptions
+- Include structured context: `log.info({ userId, email, count }, "message")`
+- **Never log passwords, tokens, or sensitive data**
+- Pattern example:
+  ```typescript
+  static async getUsers(params: {...}, log: Logger) {
+    log.debug({ page, limit }, "Fetching users list");
+    // ... database operations
+    log.info({ count: users.length, total }, "Users retrieved successfully");
+  }
+  ```
 
 ### Testing
 
@@ -96,6 +109,164 @@ bun run generate               # Run Plop scaffolding
 - **Middleware**: Auth, error, permission, logging in `src/middleware/`
 - **Libraries**: Prisma client, logger, exceptions in `src/libs/`
 - **Config**: Environment variables in `src/config/env.ts`
+
+## Feature Implementation Flow
+
+When implementing a new feature (e.g., new module for "products"), follow this workflow:
+
+### 1. Database Schema
+
+```bash
+# Edit prisma/schema.prisma to add new models
+# Then generate and apply migration
+prisma migrate dev --name add_products
+prisma generate
+```
+
+### 2. Create Module Structure
+
+Create `src/modules/products/` with:
+
+- `schema.ts` - Zod validation schemas for inputs/outputs
+- `model.ts` - TypeBox schemas for API documentation
+- `error.ts` - Custom error classes (optional)
+- `service.ts` - Business logic with logging
+- `index.ts` - Route handlers
+
+### 3. Service Layer with Logging
+
+```typescript
+import type { Logger } from "pino";
+import { prisma } from "@/libs/prisma";
+
+export abstract class ProductService {
+  static async getProducts(params: {...}, log: Logger) {
+    log.debug({ page, limit }, "Fetching products list");
+
+    const [products, total] = await prisma.$transaction([
+      prisma.product.findMany({...}),
+      prisma.product.count({ where }),
+    ]);
+
+    log.info({ count: products.length, total }, "Products retrieved successfully");
+    return { products, pagination: {...} };
+  }
+
+  static async createProduct(data: CreateProductInput, log: Logger) {
+    log.debug({ name: data.name }, "Creating new product");
+
+    const product = await prisma.product.create({ data });
+
+    log.info({ productId: product.id }, "Product created successfully");
+    return product;
+  }
+
+  static async updateProduct(id: string, data: UpdateProductInput, log: Logger) {
+    log.debug({ productId: id }, "Updating product");
+
+    const product = await prisma.product.update({ where: { id }, data });
+
+    log.info({ productId: id }, "Product updated successfully");
+    return product;
+  }
+
+  static async deleteProduct(id: string, log: Logger) {
+    log.debug({ productId: id }, "Deleting product");
+
+    await prisma.product.delete({ where: { id } });
+
+    log.info({ productId: id }, "Product deleted successfully");
+  }
+}
+```
+
+### 4. Route Handlers
+
+```typescript
+import { createBaseApp, createProtectedApp } from "@/libs/base";
+import { successResponse } from "@/libs/response";
+
+const protectedProducts = createProtectedApp()
+  .get("/", async ({ query, set, log }) => {
+    const { products, pagination } = await ProductService.getProducts(
+      query,
+      log,
+    );
+    return successResponse(set, products, "Products retrieved", 200, {
+      pagination,
+    });
+  })
+  .post("/", async ({ body, set, log }) => {
+    const product = await ProductService.createProduct(body, log);
+    return successResponse(set, product, "Product created", 201);
+  });
+
+export const products = createBaseApp({ tags: ["Products"] }).group(
+  "/products",
+  (app) => app.use(protectedProducts),
+);
+```
+
+### 5. Testing
+
+Create tests in `src/__tests__/products/`:
+
+- `list.test.ts` - Test GET endpoint with pagination
+- `create.test.ts` - Test POST endpoint
+- `update.test.ts` - Test PATCH endpoint
+- `delete.test.ts` - Test DELETE endpoint
+
+```typescript
+import { describe, it, expect, beforeEach } from "bun:test";
+import { app } from "@/app";
+import { getAuthToken, resetDatabase } from "@tests/__mocks__/test-utils";
+
+describe("POST /products", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("should create a new product", async () => {
+    const token = await getAuthToken();
+
+    const res = await app.handle(
+      new Request("http://localhost/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: "Test Product",
+          price: 99.99,
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.data.name).toBe("Test Product");
+  });
+});
+```
+
+### 6. Register Module
+
+Add to `src/modules/index.ts`:
+
+```typescript
+import { products } from "./products";
+
+export const modules = [auth, user, rbac, products];
+```
+
+### 7. Verify
+
+```bash
+bun run lint           # Check for linting errors
+bun test products      # Run feature tests
+bun run dev            # Test manually
+```
 
 ### Security Best Practices
 
