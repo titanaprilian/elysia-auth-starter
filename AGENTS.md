@@ -96,11 +96,13 @@ bun run generate               # Run Plop scaffolding
 
 ### Testing
 
-- Use `bun:test` framework
-- Mock Prisma with `mock.module("@/libs/prisma", () => ({ prisma }))`
-- Place mocks in `src/__tests__/__mocks__/`
+- Use `bun:test` framework with real database (no mocking)
+- Use `beforeEach()` to reset database state between tests
 - Use `describe()` for grouping, `it()` or `test()` for cases
-- Reset mocks in `beforeEach()`
+- Test files: `*.test.ts` in `src/__tests__/[feature]/`
+- Use test utilities from `src/__tests__/test_utils.ts`:
+  - `getAuthToken()` - Get authentication token for protected routes
+  - `resetDatabase()` - Clean up database between test runs
 
 ### Architecture
 
@@ -219,7 +221,7 @@ Create tests in `src/__tests__/products/`:
 ```typescript
 import { describe, it, expect, beforeEach } from "bun:test";
 import { app } from "@/app";
-import { getAuthToken, resetDatabase } from "@tests/__mocks__/test-utils";
+import { getAuthToken, resetDatabase } from "@tests/test_utils";
 
 describe("POST /products", () => {
   beforeEach(async () => {
