@@ -1,9 +1,0 @@
-import { t } from "elysia";
-
-export const {{capitalize name}}ParamModel = t.Object({
-  id: t.String({
-    pattern: "^c[a-z0-9]{24}$",
-  }),
-});
-
-export type {{capitalize name}}ParamType = typeof {{capitalize name}}ParamModel.static;

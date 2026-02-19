@@ -34,9 +34,6 @@ bun run lint                   # Run ESLint
 bun run lint:fix               # Fix ESLint issues
 bun run format                 # Format with Prettier
 bun run prepare                # Install Husky hooks
-
-# Code Generation
-bun run generate               # Run Plop scaffolding
 ```
 
 ## Code Style Guidelines
