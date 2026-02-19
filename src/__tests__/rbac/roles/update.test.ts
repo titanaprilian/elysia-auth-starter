@@ -139,6 +139,36 @@ describe("PATCH /rbac/roles/:id", () => {
     expect(res.status).toBe(403);
   });
 
+  it("should return 403 if trying to update a protected system role (SuperAdmin)", async () => {
+    const { authHeaders } = await createAuthenticatedUser();
+    await createTestRoleWithPermissions("TestUser", [
+      { featureName: "RBAC_management", action: "update" },
+    ]);
+
+    const superAdminRole = await prisma.role.create({
+      data: { name: "SuperAdmin", description: "System Root" },
+    });
+
+    const res = await app.handle(
+      new Request(`http://localhost/rbac/roles/${superAdminRole.id}`, {
+        method: "PATCH",
+        headers: {
+          ...authHeaders,
+          "x-forwarded-for": randomIp(),
+        },
+        body: JSON.stringify({
+          name: "Hacked Admin",
+          description: "I should not be able to change this",
+        }),
+      }),
+    );
+
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.message).toContain("protected system feature");
+  });
+
   it("should update role name successfully", async () => {
     const { authHeaders } = await createAuthenticatedUser();
     const role = await createTestRoleWithPermissions("TestUser", [

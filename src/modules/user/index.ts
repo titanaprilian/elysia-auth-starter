@@ -52,7 +52,7 @@ const protectedUser = createProtectedApp()
       beforeHandle: hasPermission(FEATURE_NAME, "create"),
       body: CreateUserSchema,
       response: {
-        201: UserModel.user,
+        201: UserModel.createResult,
         400: UserModel.validationError,
         409: UserModel.error,
         500: UserModel.error,
@@ -97,7 +97,7 @@ const protectedUser = createProtectedApp()
       params: UserParamSchema,
       body: UpdateUserSchema,
       response: {
-        200: UserModel.user,
+        200: UserModel.createResult,
         400: UserModel.validationError,
         404: UserModel.error,
         500: UserModel.error,

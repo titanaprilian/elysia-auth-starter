@@ -5,7 +5,11 @@ import type {
   CreateFeatureInput,
   UpdateFeatureInput,
 } from "./schema";
-import { DeleteSystemError, InvalidFeatureIdError } from "./error";
+import {
+  DeleteSystemError,
+  InvalidFeatureIdError,
+  UpdateSystemError,
+} from "./error";
 import { Prisma } from "@generated/prisma";
 
 // 🔒 Define system critical features and roles that cannot be touched
@@ -182,15 +186,6 @@ export const RbacService = {
     const [roles, total] = await prisma.$transaction([
       prisma.role.findMany({
         where,
-        include: {
-          permissions: {
-            include: {
-              feature: {
-                select: { id: true, name: true },
-              },
-            },
-          },
-        },
         skip,
         take: limit,
         orderBy: { name: "asc" },
@@ -249,6 +244,32 @@ export const RbacService = {
         limit,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  },
+
+  getRole: async (id: string) => {
+    const role = await prisma.role.findUniqueOrThrow({
+      where: { id },
+      include: {
+        permissions: {
+          include: {
+            feature: {
+              select: { id: true, name: true },
+            },
+          },
+          orderBy: {
+            feature: {
+              name: "asc",
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      ...role,
+      createdAt: role.createdAt.toISOString(),
+      updatedAt: role.updatedAt.toISOString(),
     };
   },
 
@@ -333,6 +354,14 @@ export const RbacService = {
   },
 
   updateRole: async (id: string, data: UpdateRoleInput) => {
+    const roleToCheck = await prisma.role.findUniqueOrThrow({
+      where: { id },
+      select: { name: true },
+    });
+
+    if (PROTECTED_ROLES.includes(roleToCheck.name)) {
+      throw new UpdateSystemError();
+    }
     const { permissions, ...roleDetails } = data;
 
     return await prisma.$transaction(async (tx) => {

@@ -73,7 +73,10 @@ export const RbacModel = {
   deleteFeature: createResponseSchema(PublicFeature),
 
   // --- ROLES ---
-  getRoles: createPaginatedResponseSchema(z.array(PublicRole)),
+  getRole: createResponseSchema(PublicRole),
+  getRoles: createPaginatedResponseSchema(
+    z.array(PublicRole.omit({ permissions: true })),
+  ),
   getRoleOptions: createPaginatedResponseSchema(z.array(RoleOption)),
   getMyRole: createResponseSchema(MyRoleResponse),
   createRole: createResponseSchema(PublicRole),

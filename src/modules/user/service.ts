@@ -118,11 +118,19 @@ export abstract class UserService {
   static async getUser(id: string) {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id },
-      select: SAFE_USER_SELECT,
+      select: {
+        ...SAFE_USER_SELECT,
+        role: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
 
     return {
       ...user,
+      roleName: user.role?.name,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };

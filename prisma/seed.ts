@@ -137,22 +137,30 @@ async function main() {
   });
 
   // Staff
-  await prisma.user.upsert({
-    where: { email: "staff@system.com" },
-    update: { roleId: staffRoleId },
-    create: {
-      email: "staff@system.com",
-      name: "John Staff",
-      password,
-      roleId: roleMap.get("Staff")!,
-      isActive: true,
-    },
-  });
+  for (let i = 1; i <= 10; i++) {
+    const email = `staff${i}@system.com`;
+    const name = `John Staff ${i}`;
+
+    await prisma.user.upsert({
+      where: { email },
+      update: {
+        roleId: staffRoleId,
+        name,
+      },
+      create: {
+        email,
+        name,
+        password,
+        roleId: staffRoleId,
+        isActive: true,
+      },
+    });
+
+    console.log(`Seeded user: ${email}`);
+  }
 
   console.log("✅ Seeding completed successfully!");
-  console.log("   - admin@system.com / password123");
-  console.log("   - manager@system.com / password123");
-  console.log("   - staff@system.com / password123");
+  console.log("   - admin@system.com / Password123");
 }
 
 main()

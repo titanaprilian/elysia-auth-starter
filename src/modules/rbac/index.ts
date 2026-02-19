@@ -15,7 +15,11 @@ import { errorResponse, successResponse } from "@/libs/response";
 import { createBaseApp, createProtectedApp } from "@/libs/base";
 import { hasPermission } from "@/middleware/permission";
 import { Prisma } from "@generated/prisma";
-import { DeleteSystemError, InvalidFeatureIdError } from "./error";
+import {
+  DeleteSystemError,
+  InvalidFeatureIdError,
+  UpdateSystemError,
+} from "./error";
 
 const FEATURE_NAME = "RBAC_management";
 
@@ -168,6 +172,22 @@ const protectedRbac = createProtectedApp()
     },
   )
   .get(
+    "/roles/:id",
+    async ({ params: { id }, set }) => {
+      const role = await RbacService.getRole(id);
+      return successResponse(set, role, "Role details retrieved successfully");
+    },
+    {
+      beforeHandle: hasPermission(FEATURE_NAME, "read"),
+      params: RoleParamSchema,
+      response: {
+        200: RbacModel.getRole,
+        404: RbacModel.error,
+        500: RbacModel.error,
+      },
+    },
+  )
+  .get(
     "/roles/me",
     async ({ user, set }) => {
       const myRole = await RbacService.getMyRole(user.id);
@@ -290,6 +310,14 @@ export const rbac = createBaseApp({ tags: ["RBAC"] }).group("/rbac", (app) =>
           set,
           403,
           "Operation Forbidden: This is a protected system feature and cannot be deleted.",
+        );
+      }
+
+      if (error instanceof UpdateSystemError) {
+        return errorResponse(
+          set,
+          403,
+          "Operation Forbidden: This is a protected system feature and cannot be updated.",
         );
       }
 

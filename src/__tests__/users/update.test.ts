@@ -118,7 +118,7 @@ describe("PATCH /users/:id", () => {
     expect(res.status).toBe(403);
   });
 
-  it.only("should return 403 if attempting to deactivate a SuperAdmin user", async () => {
+  it("should return 403 if attempting to deactivate a SuperAdmin user", async () => {
     const superAdminRole = await prisma.role.create({
       data: { name: "SuperAdmin" },
     });
