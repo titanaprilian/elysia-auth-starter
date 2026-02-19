@@ -13,6 +13,12 @@ export const loggerMiddleware = new Elysia()
     };
   })
   .onAfterResponse(({ request, set, startTime, requestId }) => {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/favicon.ico") {
+      return;
+    }
+
     const start = startTime || Date.now();
     const durationMs = Date.now() - start;
 
