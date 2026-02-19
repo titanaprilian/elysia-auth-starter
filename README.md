@@ -59,11 +59,12 @@ A production-ready authentication service built with Bun, Elysia framework, and 
 ```
 src/
 ├── __tests__/              # Unit and integration tests
-│   ├── __mocks__/          # Mock implementations
 │   ├── auth/               # Auth module tests
-│   ├── user/               # User module tests
+│   ├── users/              # User module tests
 │   ├── rbac/               # RBAC module tests
-│   └── cron/               # Cron job tests
+│   ├── cron/               # Cron job tests
+│   ├── health/             # Health check tests
+│   └── test_utils.ts       # Test utilities
 ├── config/
 │   └── env.ts              # Environment variable validation
 ├── libs/
@@ -105,22 +106,13 @@ src/
 │   ├── jwt.ts              # JWT configuration
 │   ├── openapi.ts          # OpenAPI plugin setup
 │   └── rate-limit.ts       # Rate limiting configuration
-├── scripts/
-│   └── plopfile.ts         # Code scaffolding
 ├── utils/
 │   └── time.ts             # Time utilities
-├── config/
-│   └── env.ts              # Environment configuration
 └── server.ts               # Application entry point
 
 prisma/
 ├── schema.prisma           # Database schema
-├── seed.ts                 # Database seeder
-└── prisma.ts               # Prisma utilities
-
-generated/
-├── prisma/                 # Generated Prisma client
-└── prismabox/              # Generated TypeBox types
+└── seed.ts                 # Database seeder
 ```
 
 ## Architecture
@@ -243,8 +235,8 @@ cp .env.example .env
 ```env
 NODE_ENV=development
 LOG_LEVEL=info
-PORT=3000
-CORS_ORIGIN=http://localhost:5173
+PORT=4000
+CORS_ORIGIN=http://localhost:3000
 
 DATABASE_URL=postgresql://user:password@localhost:5432/mydb
 
@@ -276,7 +268,7 @@ Start the development server with hot reload:
 bun run dev
 ```
 
-The server will start at `http://localhost:3000`.
+The server will start at `http://localhost:4000`.
 
 ### Production
 
@@ -299,8 +291,6 @@ Run tests:
 
 ```bash
 bun test           # Run all tests
-bun test unit      # Unit tests only
-bun test int       # Integration tests only
 ```
 
 ## API Endpoints
@@ -338,12 +328,13 @@ bun test int       # Integration tests only
 
 #### Roles
 
-| Method | Endpoint          | Description     | Permission Required      |
-| ------ | ----------------- | --------------- | ------------------------ |
-| GET    | `/rbac/roles`     | List all roles  | `RBAC_management:read`   |
-| POST   | `/rbac/roles`     | Create new role | `RBAC_management:create` |
-| PATCH  | `/rbac/roles/:id` | Update role     | `RBAC_management:update` |
-| DELETE | `/rbac/roles/:id` | Delete role     | `RBAC_management:delete` |
+| Method | Endpoint          | Description          | Permission Required      |
+| ------ | ----------------- | -------------------- | ------------------------ |
+| GET    | `/rbac/roles`     | List all roles       | `RBAC_management:read`   |
+| POST   | `/rbac/roles`     | Create new role      | `RBAC_management:create` |
+| PATCH  | `/rbac/roles/:id` | Update role          | `RBAC_management:update` |
+| DELETE | `/rbac/roles/:id` | Delete role          | `RBAC_management:delete` |
+| ME     | `/rbac/roles/me`  | List user permission | `RBAC_management:delete` |
 
 ### Health Check (`/`)
 
@@ -353,7 +344,7 @@ bun test int       # Integration tests only
 
 ### OpenAPI Documentation
 
-Access the Swagger UI at `http://localhost:3000/openapi` when the server is running.
+Access the Swagger UI at `http://localhost:4000/openapi` when the server is running.
 
 ## Environment Variables
 
@@ -361,7 +352,7 @@ Access the Swagger UI at `http://localhost:3000/openapi` when the server is runn
 | ------------------------ | --------------------------------------- | -------- | ------- |
 | `NODE_ENV`               | Environment mode                        | Yes      | -       |
 | `LOG_LEVEL`              | Logging level                           | No       | `info`  |
-| `PORT`                   | Server port                             | No       | `3000`  |
+| `PORT`                   | Server port                             | No       | `4000`  |
 | `CORS_ORIGIN`            | Allowed CORS origin                     | Yes      | -       |
 | `DATABASE_URL`           | PostgreSQL connection URL               | Yes      | -       |
 | `JWT_ACCESS_SECRET`      | JWT access token secret (min 32 chars)  | Yes      | -       |
@@ -382,7 +373,6 @@ Access the Swagger UI at `http://localhost:3000/openapi` when the server is runn
 | `bun test`            | Run all tests            |
 | `bun run lint`        | Run ESLint               |
 | `bun run format`      | Format with Prettier     |
-| `bun run generate`    | Run Plop scaffolding     |
 
 ## Security Best Practices
 
