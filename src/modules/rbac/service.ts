@@ -11,6 +11,7 @@ import {
   UpdateSystemError,
 } from "./error";
 import { Prisma } from "@generated/prisma";
+import type { Logger } from "pino";
 
 // 🔒 Define system critical features and roles that cannot be touched
 const PROTECTED_FEATURES = ["RBAC_management"];
@@ -23,11 +24,19 @@ export const RbacService = {
    * Standard CRUD operations
    * =========================================
    */
-  getAllFeatures: async (params: {
-    page: number;
-    limit: number;
-    search?: string;
-  }) => {
+  getAllFeatures: async (
+    params: {
+      page: number;
+      limit: number;
+      search?: string;
+    },
+    log: Logger,
+  ) => {
+    log.debug(
+      { page: params.page, limit: params.limit, search: params.search },
+      "Fetching features list",
+    );
+
     const { page, limit, search } = params;
     const where: Prisma.FeatureWhereInput = {};
 
@@ -51,6 +60,11 @@ export const RbacService = {
       prisma.feature.count({ where }),
     ]);
 
+    log.info(
+      { count: features.length, total },
+      "Features retrieved successfully",
+    );
+
     // Convert Date objects to ISO strings
     const featuresWithStringDates = features.map((feature) => ({
       ...feature,
@@ -69,13 +83,19 @@ export const RbacService = {
     };
   },
 
-  createFeature: async (data: CreateFeatureInput) => {
+  createFeature: async (data: CreateFeatureInput, log: Logger) => {
+    log.debug({ name: data.name }, "Creating new feature");
     const { defaultPermissions, ...featureData } = data;
 
     return await prisma.$transaction(async (tx) => {
       const newFeature = await tx.feature.create({
         data: featureData,
       });
+
+      log.info(
+        { featureId: newFeature.id, name: newFeature.name },
+        "Feature created successfully",
+      );
 
       if (defaultPermissions) {
         const allRoles = await tx.role.findMany({
@@ -107,6 +127,11 @@ export const RbacService = {
           await tx.roleFeature.createMany({
             data: roleFeaturesData,
           });
+
+          log.info(
+            { featureId: newFeature.id, roleCount: allRoles.length },
+            "Default permissions assigned to roles",
+          );
         }
       }
 
@@ -118,11 +143,18 @@ export const RbacService = {
     });
   },
 
-  updateFeature: async (id: string, data: UpdateFeatureInput) => {
+  updateFeature: async (id: string, data: UpdateFeatureInput, log: Logger) => {
+    log.debug({ featureId: id }, "Updating feature");
+
     const updatedFeature = await prisma.feature.update({
       where: { id },
       data,
     });
+
+    log.info(
+      { featureId: id, name: updatedFeature.name },
+      "Feature updated successfully",
+    );
 
     return {
       ...updatedFeature,
@@ -131,18 +163,29 @@ export const RbacService = {
     };
   },
 
-  deleteFeature: async (id: string) => {
+  deleteFeature: async (id: string, log: Logger) => {
+    log.debug({ featureId: id }, "Attempting to delete feature");
+
     const feature = await prisma.feature.findUniqueOrThrow({
       where: { id },
     });
 
     if (PROTECTED_FEATURES.includes(feature.name)) {
+      log.warn(
+        { featureId: id, name: feature.name },
+        "Delete blocked: Protected system feature",
+      );
       throw new DeleteSystemError();
     }
 
     const deletedFreature = await prisma.feature.delete({
       where: { id },
     });
+
+    log.info(
+      { featureId: id, name: deletedFreature.name },
+      "Feature deleted successfully",
+    );
 
     return {
       ...deletedFreature,
@@ -157,12 +200,25 @@ export const RbacService = {
    * Complex CRUD handling relations
    * =========================================
    */
-  getAllRoles: async (params: {
-    page: number;
-    limit: number;
-    search?: string;
-    feature?: string;
-  }) => {
+  getAllRoles: async (
+    params: {
+      page: number;
+      limit: number;
+      search?: string;
+      feature?: string;
+    },
+    log: Logger,
+  ) => {
+    log.debug(
+      {
+        page: params.page,
+        limit: params.limit,
+        search: params.search,
+        feature: params.feature,
+      },
+      "Fetching roles list",
+    );
+
     const { page, limit, search, feature } = params;
     const where: Prisma.RoleWhereInput = {};
 
@@ -193,6 +249,8 @@ export const RbacService = {
       prisma.role.count({ where }),
     ]);
 
+    log.info({ count: roles.length, total }, "Roles retrieved successfully");
+
     // Convert Date objects to ISO strings
     const roleWithStringDates = roles.map((role) => ({
       ...role,
@@ -211,11 +269,19 @@ export const RbacService = {
     };
   },
 
-  getRoleOptions: async (params: {
-    page: number;
-    limit: number;
-    search?: string;
-  }) => {
+  getRoleOptions: async (
+    params: {
+      page: number;
+      limit: number;
+      search?: string;
+    },
+    log: Logger,
+  ) => {
+    log.debug(
+      { page: params.page, limit: params.limit, search: params.search },
+      "Fetching role options",
+    );
+
     const { page, limit, search } = params;
     const where: Prisma.RoleWhereInput = {};
 
@@ -236,6 +302,11 @@ export const RbacService = {
       prisma.role.count({ where }),
     ]);
 
+    log.info(
+      { count: roles.length, total },
+      "Role options retrieved successfully",
+    );
+
     return {
       roles,
       pagination: {
@@ -247,7 +318,9 @@ export const RbacService = {
     };
   },
 
-  getRole: async (id: string) => {
+  getRole: async (id: string, log: Logger) => {
+    log.debug({ roleId: id }, "Fetching role details");
+
     const role = await prisma.role.findUniqueOrThrow({
       where: { id },
       include: {
@@ -266,6 +339,11 @@ export const RbacService = {
       },
     });
 
+    log.info(
+      { roleId: id, name: role.name, permissionCount: role.permissions.length },
+      "Role details retrieved successfully",
+    );
+
     return {
       ...role,
       createdAt: role.createdAt.toISOString(),
@@ -273,7 +351,9 @@ export const RbacService = {
     };
   },
 
-  createRole: async (data: CreateRoleInput) => {
+  createRole: async (data: CreateRoleInput, log: Logger) => {
+    log.debug({ name: data.name }, "Creating new role");
+
     return await prisma.$transaction(async (tx) => {
       // Validate featureIds if permissions are provided
       if (data.permissions && data.permissions.length > 0) {
@@ -287,6 +367,10 @@ export const RbacService = {
           (id) => !existingFeatureIds.has(id),
         );
         if (invalidFeatureIds.length > 0) {
+          log.warn(
+            { invalidFeatureIds: invalidFeatureIds.join(", ") },
+            "Role creation failed: Invalid feature IDs",
+          );
           throw new InvalidFeatureIdError(
             "Invalid featureId(s): " + invalidFeatureIds.join(", "),
           );
@@ -300,6 +384,11 @@ export const RbacService = {
           description: data.description,
         },
       });
+
+      log.info(
+        { roleId: role.id, name: role.name },
+        "Role created successfully",
+      );
 
       // Fetch ALL system features
       // We need this list to guarantee we create a permission entry for every single feature
@@ -330,6 +419,10 @@ export const RbacService = {
         await tx.roleFeature.createMany({
           data: roleFeaturesData,
         });
+        log.info(
+          { roleId: role.id, permissionCount: roleFeaturesData.length },
+          "Permissions assigned to role",
+        );
       }
 
       const newRole = await tx.role.findUniqueOrThrow({
@@ -353,13 +446,19 @@ export const RbacService = {
     });
   },
 
-  updateRole: async (id: string, data: UpdateRoleInput) => {
+  updateRole: async (id: string, data: UpdateRoleInput, log: Logger) => {
+    log.debug({ roleId: id }, "Updating role");
+
     const roleToCheck = await prisma.role.findUniqueOrThrow({
       where: { id },
       select: { name: true },
     });
 
     if (PROTECTED_ROLES.includes(roleToCheck.name)) {
+      log.warn(
+        { roleId: id, name: roleToCheck.name },
+        "Update blocked: Protected system role",
+      );
       throw new UpdateSystemError();
     }
     const { permissions, ...roleDetails } = data;
@@ -387,6 +486,10 @@ export const RbacService = {
               canPrint: p.canPrint,
             })),
           });
+          log.info(
+            { roleId: id, permissionCount: permissions.length },
+            "Permissions updated for role",
+          );
         }
       }
 
@@ -399,6 +502,11 @@ export const RbacService = {
         },
       });
 
+      log.info(
+        { roleId: id, name: updatedRole.name },
+        "Role updated successfully",
+      );
+
       return {
         ...updatedRole,
         createdAt: updatedRole.createdAt.toISOString(),
@@ -407,7 +515,9 @@ export const RbacService = {
     });
   },
 
-  getMyRole: async (userId: string) => {
+  getMyRole: async (userId: string, log: Logger) => {
+    log.debug({ userId }, "Fetching current user role and permissions");
+
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: userId },
       include: {
@@ -423,6 +533,15 @@ export const RbacService = {
       },
     });
 
+    log.info(
+      {
+        userId,
+        roleName: user.role.name,
+        permissionCount: user.role.permissions.length,
+      },
+      "User role retrieved successfully",
+    );
+
     return {
       roleName: user.role.name,
       permissions: user.role.permissions.map((p) => ({
@@ -437,18 +556,29 @@ export const RbacService = {
     };
   },
 
-  deleteRole: async (id: string) => {
+  deleteRole: async (id: string, log: Logger) => {
+    log.debug({ roleId: id }, "Attempting to delete role");
+
     const role = await prisma.role.findUniqueOrThrow({
       where: { id },
     });
 
     if (PROTECTED_ROLES.includes(role.name)) {
+      log.warn(
+        { roleId: id, name: role.name },
+        "Delete blocked: Protected system role",
+      );
       throw new DeleteSystemError();
     }
 
     const deletedRole = await prisma.role.delete({
       where: { id },
     });
+
+    log.info(
+      { roleId: id, name: deletedRole.name },
+      "Role deleted successfully",
+    );
 
     return {
       ...deletedRole,

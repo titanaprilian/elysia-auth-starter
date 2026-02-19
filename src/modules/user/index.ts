@@ -18,16 +18,19 @@ const FEATURE_NAME = "user_management";
 const protectedUser = createProtectedApp()
   .get(
     "/",
-    async ({ query, set }) => {
+    async ({ query, set, log }) => {
       const { page = 1, limit = 10, isActive, roleId, search } = query;
 
-      const { users, pagination } = await UserService.getUsers({
-        page,
-        limit,
-        isActive,
-        roleId,
-        search,
-      });
+      const { users, pagination } = await UserService.getUsers(
+        {
+          page,
+          limit,
+          isActive,
+          roleId,
+          search,
+        },
+        log,
+      );
 
       return successResponse(set, users, "Users retrieved successfully", 200, {
         pagination,
@@ -44,8 +47,8 @@ const protectedUser = createProtectedApp()
   )
   .post(
     "/",
-    async ({ body, set }) => {
-      const data = await UserService.createUser(body);
+    async ({ body, set, log }) => {
+      const data = await UserService.createUser(body, log);
       return successResponse(set, data, "User Succesfully Created", 201);
     },
     {
@@ -61,8 +64,8 @@ const protectedUser = createProtectedApp()
   )
   .get(
     "/:id",
-    async ({ params, set }) => {
-      const user = await UserService.getUser(params.id);
+    async ({ params, set, log }) => {
+      const user = await UserService.getUser(params.id, log);
       if (!user) {
         return errorResponse(set, 404, "User Not Found");
       }
@@ -81,10 +84,9 @@ const protectedUser = createProtectedApp()
   )
   .patch(
     "/:id",
-    async ({ body, params, set }) => {
-      const updatedUser = await UserService.updateUser(params.id, body);
+    async ({ body, params, set, log }) => {
+      const updatedUser = await UserService.updateUser(params.id, body, log);
 
-      console.log(updatedUser);
       return successResponse(
         set,
         updatedUser,
@@ -106,8 +108,8 @@ const protectedUser = createProtectedApp()
   )
   .delete(
     "/:id",
-    async ({ params, user, set }) => {
-      const deletedUser = await UserService.deleteUser(params.id, user.id);
+    async ({ params, user, set, log }) => {
+      const deletedUser = await UserService.deleteUser(params.id, user.id, log);
       return successResponse(
         set,
         deletedUser,

@@ -34,14 +34,17 @@ const protectedRbac = createProtectedApp()
   // -------------------------
   .get(
     "/features",
-    async ({ set, query }) => {
+    async ({ set, query, log }) => {
       const { page = 1, limit = 10, search } = query;
 
-      const { features, pagination } = await RbacService.getAllFeatures({
-        page,
-        limit,
-        search,
-      });
+      const { features, pagination } = await RbacService.getAllFeatures(
+        {
+          page,
+          limit,
+          search,
+        },
+        log,
+      );
 
       return successResponse(
         set,
@@ -64,8 +67,8 @@ const protectedRbac = createProtectedApp()
   )
   .post(
     "/features",
-    async ({ body, set }) => {
-      const feature = await RbacService.createFeature(body);
+    async ({ body, set, log }) => {
+      const feature = await RbacService.createFeature(body, log);
       return successResponse(set, feature, "Feature created successfully", 201);
     },
     {
@@ -80,8 +83,8 @@ const protectedRbac = createProtectedApp()
   )
   .patch(
     "/features/:id",
-    async ({ params: { id }, body, set }) => {
-      const feature = await RbacService.updateFeature(id, body);
+    async ({ params: { id }, body, set, log }) => {
+      const feature = await RbacService.updateFeature(id, body, log);
       return successResponse(set, feature, "Feature updated successfully");
     },
     {
@@ -97,8 +100,8 @@ const protectedRbac = createProtectedApp()
   )
   .delete(
     "/features/:id",
-    async ({ params: { id }, set }) => {
-      const deletedFeature = await RbacService.deleteFeature(id);
+    async ({ params: { id }, set, log }) => {
+      const deletedFeature = await RbacService.deleteFeature(id, log);
       return successResponse(
         set,
         deletedFeature,
@@ -120,15 +123,18 @@ const protectedRbac = createProtectedApp()
   // -------------------------
   .get(
     "/roles",
-    async ({ query, set }) => {
+    async ({ query, set, log }) => {
       const { page = 1, limit = 10, search, feature } = query;
 
-      const { roles, pagination } = await RbacService.getAllRoles({
-        page,
-        limit,
-        search,
-        feature,
-      });
+      const { roles, pagination } = await RbacService.getAllRoles(
+        {
+          page,
+          limit,
+          search,
+          feature,
+        },
+        log,
+      );
 
       return successResponse(set, roles, "Roles retrieved successfully", 200, {
         pagination,
@@ -145,13 +151,16 @@ const protectedRbac = createProtectedApp()
   )
   .get(
     "/roles/options",
-    async ({ query, set }) => {
+    async ({ query, set, log }) => {
       const { page, limit, search } = query;
-      const { roles, pagination } = await RbacService.getRoleOptions({
-        page: Number(page) || 1,
-        limit: Number(limit) || 10,
-        search: search as string | undefined,
-      });
+      const { roles, pagination } = await RbacService.getRoleOptions(
+        {
+          page: Number(page) || 1,
+          limit: Number(limit) || 10,
+          search: search as string | undefined,
+        },
+        log,
+      );
       return successResponse(
         set,
         roles,
@@ -173,8 +182,8 @@ const protectedRbac = createProtectedApp()
   )
   .get(
     "/roles/:id",
-    async ({ params: { id }, set }) => {
-      const role = await RbacService.getRole(id);
+    async ({ params: { id }, set, log }) => {
+      const role = await RbacService.getRole(id, log);
       return successResponse(set, role, "Role details retrieved successfully");
     },
     {
@@ -189,8 +198,8 @@ const protectedRbac = createProtectedApp()
   )
   .get(
     "/roles/me",
-    async ({ user, set }) => {
-      const myRole = await RbacService.getMyRole(user.id);
+    async ({ user, set, log }) => {
+      const myRole = await RbacService.getMyRole(user.id, log);
       return successResponse(set, myRole, "My role retrieved successfully");
     },
     {
@@ -202,8 +211,8 @@ const protectedRbac = createProtectedApp()
   )
   .post(
     "/roles",
-    async ({ body, set }) => {
-      const newRole = await RbacService.createRole(body);
+    async ({ body, set, log }) => {
+      const newRole = await RbacService.createRole(body, log);
       return successResponse(set, newRole, "Role created successfully", 201);
     },
     {
@@ -218,8 +227,8 @@ const protectedRbac = createProtectedApp()
   )
   .patch(
     "/roles/:id",
-    async ({ params: { id }, body, set }) => {
-      const updatedRole = await RbacService.updateRole(id, body);
+    async ({ params: { id }, body, set, log }) => {
+      const updatedRole = await RbacService.updateRole(id, body, log);
       return successResponse(set, updatedRole, "Role updated successfully");
     },
     {
@@ -235,8 +244,8 @@ const protectedRbac = createProtectedApp()
   )
   .delete(
     "/roles/:id",
-    async ({ params: { id }, set }) => {
-      const deletedRole = await RbacService.deleteRole(id);
+    async ({ params: { id }, set, log }) => {
+      const deletedRole = await RbacService.deleteRole(id, log);
       return successResponse(set, deletedRole, "Role deleted successfully");
     },
     {

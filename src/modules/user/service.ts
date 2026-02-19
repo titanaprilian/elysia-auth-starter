@@ -3,6 +3,7 @@ import type { CreateUserInput, UpdateUserInput } from "./schema";
 import { CreateSystemError, DeleteSelfError, UpdateSystemError } from "./error";
 import { DeleteSystemError } from "../rbac/error";
 import { Prisma } from "@generated/prisma";
+import type { Logger } from "pino";
 
 export const SAFE_USER_SELECT = {
   id: true,
@@ -18,13 +19,27 @@ export const SAFE_USER_SELECT = {
 const PROTECTED_ROLES = ["SuperAdmin"];
 
 export abstract class UserService {
-  static async getUsers(params: {
-    page: number;
-    limit: number;
-    search?: string;
-    isActive?: boolean;
-    roleId?: string;
-  }) {
+  static async getUsers(
+    params: {
+      page: number;
+      limit: number;
+      search?: string;
+      isActive?: boolean;
+      roleId?: string;
+    },
+    log: Logger,
+  ) {
+    log.debug(
+      {
+        page: params.page,
+        limit: params.limit,
+        search: params.search,
+        isActive: params.isActive,
+        roleId: params.roleId,
+      },
+      "Fetching users list",
+    );
+
     const { page, limit, search, isActive, roleId } = params;
 
     const where: Prisma.UserWhereInput = {};
@@ -69,6 +84,8 @@ export abstract class UserService {
       prisma.user.count({ where }),
     ]);
 
+    log.info({ count: users.length, total }, "Users retrieved successfully");
+
     // Convert Date objects to ISO strings
     const userWithStringDates = users.map((user) => ({
       ...user,
@@ -88,7 +105,9 @@ export abstract class UserService {
     };
   }
 
-  static async createUser(data: CreateUserInput) {
+  static async createUser(data: CreateUserInput, log: Logger) {
+    log.debug({ email: data.email, roleId: data.roleId }, "Creating new user");
+
     // 🛡️ SECURITY CHECK: Duplicate SuperAdmin
     // If the user being created is a SuperAdmin, BLOCK IT. We need to make sure SuperAdmin is only one
     const role = await prisma.role.findUnique({
@@ -96,7 +115,13 @@ export abstract class UserService {
         id: data.roleId,
       },
     });
-    if (role?.name === "SuperAdmin") throw new CreateSystemError();
+    if (role?.name === "SuperAdmin") {
+      log.warn(
+        { email: data.email, roleId: data.roleId },
+        "User creation blocked: Attempt to create duplicate SuperAdmin",
+      );
+      throw new CreateSystemError();
+    }
 
     const hashedPassword = await Bun.password.hash(data.password);
 
@@ -108,6 +133,11 @@ export abstract class UserService {
       select: SAFE_USER_SELECT,
     });
 
+    log.info(
+      { userId: user.id, email: user.email, roleId: user.roleId },
+      "User created successfully",
+    );
+
     return {
       ...user,
       createdAt: user.createdAt.toISOString(),
@@ -115,7 +145,9 @@ export abstract class UserService {
     };
   }
 
-  static async getUser(id: string) {
+  static async getUser(id: string, log: Logger) {
+    log.debug({ userId: id }, "Fetching user details");
+
     const user = await prisma.user.findUniqueOrThrow({
       where: { id },
       select: {
@@ -128,6 +160,11 @@ export abstract class UserService {
       },
     });
 
+    log.info(
+      { userId: id, email: user.email, roleName: user.role?.name },
+      "User details retrieved successfully",
+    );
+
     return {
       ...user,
       roleName: user.role?.name,
@@ -136,7 +173,9 @@ export abstract class UserService {
     };
   }
 
-  static async updateUser(id: string, data: UpdateUserInput) {
+  static async updateUser(id: string, data: UpdateUserInput, log: Logger) {
+    log.debug({ userId: id }, "Updating user");
+
     const updateData = { ...data };
     if (updateData.password) {
       updateData.password = await Bun.password.hash(updateData.password);
@@ -151,6 +190,10 @@ export abstract class UserService {
       });
 
       if (existingUser?.role?.name === "SuperAdmin") {
+        log.warn(
+          { userId: id },
+          "User update blocked: Attempt to deactivate SuperAdmin",
+        );
         throw new UpdateSystemError();
       }
     }
@@ -161,6 +204,8 @@ export abstract class UserService {
       data: updateData,
     });
 
+    log.info({ userId: id, email: user.email }, "User updated successfully");
+
     return {
       ...user,
       createdAt: user.createdAt.toISOString(),
@@ -168,9 +213,22 @@ export abstract class UserService {
     };
   }
 
-  static async deleteUser(targetId: string, requestingUserId: string) {
+  static async deleteUser(
+    targetId: string,
+    requestingUserId: string,
+    log: Logger,
+  ) {
+    log.debug(
+      { targetUserId: targetId, requestingUserId },
+      "Attempting to delete user",
+    );
+
     // 🛡️ SECURITY CHECK: Suicide Prevention
     if (targetId === requestingUserId) {
+      log.warn(
+        { targetUserId: targetId },
+        "User deletion blocked: Self-deletion attempt",
+      );
       throw new DeleteSelfError();
     }
 
@@ -183,6 +241,10 @@ export abstract class UserService {
     // 🛡️ SECURITY CHECK: Protected User
     // If the user being deleted is a SuperAdmin, BLOCK IT.
     if (targetUser.role && PROTECTED_ROLES.includes(targetUser.role.name)) {
+      log.warn(
+        { targetUserId: targetId, roleName: targetUser.role.name },
+        "User deletion blocked: Protected SuperAdmin user",
+      );
       throw new DeleteSystemError(
         "Cannot delete a user with SuperAdmin privileges.",
       );
@@ -193,6 +255,11 @@ export abstract class UserService {
       where: { id: targetId },
       select: SAFE_USER_SELECT,
     });
+
+    log.info(
+      { userId: targetId, email: user.email },
+      "User deleted successfully",
+    );
 
     return {
       ...user,
