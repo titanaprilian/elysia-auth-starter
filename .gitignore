@@ -41,6 +41,8 @@ yarn-error.log*
 **/*.log
 package-lock.json
 **/*.bun
-/prisma/generated/prisma
+# generated files
+/generated/
 
-/src/generated/prisma
+# build output
+/dist/
