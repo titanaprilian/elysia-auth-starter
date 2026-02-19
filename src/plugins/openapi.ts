@@ -26,17 +26,24 @@ export const openapiPlugin = openapi({
   documentation: {
     openapi: "3.0.3",
     info: {
-      title: "Elysia Auth Best Practices API",
+      title: "Elysia Auth RBAC API",
       version: "1.0.0",
       description: `
-This API demonstrates **authentication best practices** using **Elysia**, **Prisma**, and **JWT**.
+A production-ready authentication service with Role-Based Access Control (RBAC).
 
-### Principles
-- Stateless authentication using JWT
-- Explicit separation of public and protected routes
-- Schema-first validation (Zod + TypeBox)
-- No URL-based API versioning
-- Backward-compatible API evolution
+### Features
+- JWT-based authentication with access & refresh tokens
+- Token rotation for security
+- Session management (logout single/all devices)
+- User management with CRUD operations
+- Role & Feature management with granular permissions
+- Dashboard statistics endpoint
+
+### Security
+- Password hashing with bcrypt
+- HttpOnly cookies for refresh tokens
+- Rate limiting on auth endpoints
+- Protected system roles/features
 
 ⚠️ This documentation is disabled in production.
       `.trim(),
@@ -45,19 +52,27 @@ This API demonstrates **authentication best practices** using **Elysia**, **Pris
       {
         name: "Auth",
         description:
-          "Authentication & authorization flows (login, refresh, logout, logout all)",
+          "Authentication endpoints - Login, refresh token, logout. Publicly accessible with rate limiting.",
       },
       {
         name: "User",
-        description: "Protected user-related operations",
+        description:
+          "User management - Create, read, update, delete users. Requires user_management permissions",
       },
       {
         name: "Health",
-        description: "System & health-check endpoints",
+        description:
+          "System health check - Public endpoint to verify API status.",
       },
       {
         name: "RBAC",
-        description: "System Role Based Access Control",
+        description:
+          "Role-Based Access Control - Manage roles, features, and permissions. Requires RBAC_management permission.",
+      },
+      {
+        name: "Dashboard",
+        description:
+          "Dashboard statistics - View system overview (total users, roles, features, user distribution). Accessible to all authenticated users.",
       },
     ],
 
@@ -72,15 +87,5 @@ This API demonstrates **authentication best practices** using **Elysia**, **Pris
         },
       },
     },
-
-    // /**
-    //  * Default security requirement
-    //  * All routes are considered protected unless explicitly overridden
-    //  */
-    // security: [
-    //   {
-    //     bearerAuth: [],
-    //   },
-    // ],
   },
 });
