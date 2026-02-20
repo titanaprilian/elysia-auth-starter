@@ -71,12 +71,13 @@ export const DEFAULT_LOCALE = "en";
 export type Locale = typeof en;
 
 function getLocaleFromHeader(acceptLanguage: string | undefined): string {
-  if (!acceptLanguage) return DEFAULT_LOCALE;
+  if (!acceptLanguage || acceptLanguage === "*") return DEFAULT_LOCALE;
 
   const preferred = acceptLanguage
     .split(",")
     .map((lang) => lang.split(";")[0].trim().toLowerCase())
     .find((lang) => {
+      if (lang === "*") return null;
       if (lang.startsWith("en")) return "en";
       if (lang.startsWith("es")) return "es";
       if (lang.startsWith("id")) return "id";

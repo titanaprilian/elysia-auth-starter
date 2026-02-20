@@ -11,7 +11,8 @@ declare module "elysia" {
 export const i18nMiddleware = new Elysia()
   .derive(({ headers }) => {
     const acceptLanguage =
-      headers["Accept-Language"] || headers["accept-language"];
+      headers["Accept-Language"] || headers["accept-language"] || "";
+
     const locale = getLocale(acceptLanguage);
     const t = createTranslator(locale);
 

@@ -20,6 +20,13 @@ export const app = new Elysia()
       origin: env.NODE_ENV === "production" ? env.CORS_ORIGIN : true,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "Accept-Language",
+        "accept-language",
+      ],
+      exposedHeaders: ["Content-Language"],
     }),
   )
   .use(

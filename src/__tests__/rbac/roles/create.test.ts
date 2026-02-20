@@ -422,9 +422,6 @@ describe("POST /rbac/roles", () => {
     );
 
     const body = await res.json();
-    if (res.status === 400) {
-      console.log("Validation Error Details:", JSON.stringify(body, null, 2));
-    }
 
     expect(res.status).toBe(201);
     expect(body.data.permissions.length).toBeGreaterThan(0);
@@ -461,9 +458,6 @@ describe("POST /rbac/roles", () => {
     );
 
     const body = await res.json();
-    if (res.status === 400) {
-      console.log("Validation Error Details:", JSON.stringify(body, null, 2));
-    }
     expect(res.status).toBe(201);
     expect(body.data.permissions.length).toBeGreaterThan(0);
     body.data.permissions.forEach((perm: any) => {

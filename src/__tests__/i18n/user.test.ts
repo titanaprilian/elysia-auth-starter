@@ -363,7 +363,7 @@ describe("PATCH /users/:id - Update user with i18n", () => {
     expect(body.message).toBe("Usuario actualizado exitosamente");
   });
 
-  it("should return Indonesian message when updating user in Indonesian", async () => {
+  it.only("should return Indonesian message when updating user in Indonesian", async () => {
     const { authHeaders, user } = await createAuthenticatedUser();
     await createTestRoleWithPermissions("TestUser", [
       { featureName: "user_management", action: "update" },

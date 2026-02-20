@@ -101,13 +101,127 @@ bun run prepare                # Install Husky hooks
   - `getAuthToken()` - Get authentication token for protected routes
   - `resetDatabase()` - Clean up database between test runs
 
+### i18n Testing
+
+Create i18n tests in `src/__tests__/i18n/`:
+
+- `auth.test.ts` - Test auth endpoint i18n
+- `user.test.ts` - Test user endpoint i18n
+- `rbac.test.ts` - Test RBAC endpoint i18n
+- `dashboard.test.ts` - Test dashboard endpoint i18n
+- `health.test.ts` - Test health endpoint i18n
+
+```typescript
+describe("POST /auth/login - Login i18n", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+  });
+
+  it("should return Spanish message when Accept-Language is es", async () => {
+    await createTestUser({ email: "test@test.com" });
+
+    const response = await app.handle(
+      new Request("http://localhost/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "accept-language": "es",
+          "x-forwarded-for": randomIp(),
+        },
+        body: JSON.stringify({
+          email: "test@test.com",
+          password: "wrongpassword",
+        }),
+      }),
+    );
+
+    const body = await response.json();
+    expect(response.status).toBe(401);
+    expect(body.message).toBe("Email o contraseña inválidos");
+  });
+});
+```
+
 ### Architecture
 
-- **Modules**: Feature-based in `src/modules/[name]/` with `index.ts`, `service.ts`, `model.ts`, `schema.ts`
+- **Modules**: Feature-based in `src/modules/[name]/` with `index.ts`, `service.ts`, `model.ts`, `schema.ts`, `error.ts`, `locales/`
 - **Plugins**: Elysia plugins in `src/plugins/`
-- **Middleware**: Auth, error, permission, logging in `src/middleware/`
-- **Libraries**: Prisma client, logger, exceptions in `src/libs/`
+- **Middleware**: Auth, error, permission, logging, i18n in `src/middleware/`
+- **Libraries**: Prisma client, logger, exceptions, i18n in `src/libs/`
+- **Locales**: Common translations in `src/locales/[lang].ts`, module-specific in `src/modules/[name]/locales/[lang].ts`
 - **Config**: Environment variables in `src/config/env.ts`
+
+### Internationalization (i18n)
+
+The project uses a module-based i18n structure:
+
+**Common locales** (shared across all modules):
+
+```
+src/locales/
+  en.ts    # English common + validation messages
+  es.ts    # Spanish common + validation messages
+  id.ts    # Indonesian common + validation messages
+```
+
+**Module-specific locales** (each module has its own):
+
+```
+src/modules/
+  auth/
+    locales/
+      en.ts, es.ts, id.ts
+  user/
+    locales/
+      en.ts, es.ts, id.ts
+  rbac/
+    locales/
+      en.ts, es.ts, id.ts
+  dashboard/
+    locales/
+      en.ts, es.ts, id.ts
+  health/
+    locales/
+      en.ts, es.ts, id.ts
+```
+
+**Using i18n in routes:**
+
+```typescript
+import { successResponse, errorResponse } from "@/libs/response";
+
+// Success message with i18n
+return successResponse(
+  set,
+  data,
+  { key: "user.createSuccess" }, // uses module-specific translation
+  201,
+  undefined,
+  locale,
+);
+
+// Error message with i18n
+return errorResponse(
+  set,
+  404,
+  { key: "common.notFound" }, // uses common translation
+  null,
+  locale,
+);
+```
+
+**Frontend:** Send `Accept-Language` header with requests (e.g., `es-ES`, `id-ID`, `en`)
+
+### 2. Create Module Structure
+
+Create `src/modules/products/` with:
+
+- `schema.ts` - Zod validation schemas for inputs/outputs
+- `model.ts` - TypeBox schemas for API documentation
+- `error.ts` - Custom error classes (optional)
+- `service.ts` - Business logic with logging
+- `index.ts` - Route handlers
+- `locales/` - i18n translations (optional)
 
 ## Feature Implementation Flow
 
@@ -131,6 +245,20 @@ Create `src/modules/products/` with:
 - `error.ts` - Custom error classes (optional)
 - `service.ts` - Business logic with logging
 - `index.ts` - Route handlers
+- `locales/` - i18n translations (optional)
+
+```
+src/modules/products/
+  index.ts
+  service.ts
+  model.ts
+  schema.ts
+  error.ts
+  locales/
+    en.ts
+    es.ts
+    id.ts
+```
 
 ### 3. Service Layer with Logging
 
@@ -186,18 +314,32 @@ import { createBaseApp, createProtectedApp } from "@/libs/base";
 import { successResponse } from "@/libs/response";
 
 const protectedProducts = createProtectedApp()
-  .get("/", async ({ query, set, log }) => {
+  .get("/", async ({ query, set, log, locale }) => {
     const { products, pagination } = await ProductService.getProducts(
       query,
       log,
     );
-    return successResponse(set, products, "Products retrieved", 200, {
-      pagination,
-    });
+    return successResponse(
+      set,
+      products,
+      { key: "products.listSuccess" },
+      200,
+      {
+        pagination,
+      },
+      locale,
+    );
   })
-  .post("/", async ({ body, set, log }) => {
+  .post("/", async ({ body, set, log, locale }) => {
     const product = await ProductService.createProduct(body, log);
-    return successResponse(set, product, "Product created", 201);
+    return successResponse(
+      set,
+      product,
+      { key: "products.createSuccess" },
+      201,
+      undefined,
+      locale,
+    );
   });
 
 export const products = createBaseApp({ tags: ["Products"] }).group(
