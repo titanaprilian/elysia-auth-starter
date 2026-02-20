@@ -1,21 +1,28 @@
+import { t } from "@/libs/i18n";
+
 export class DeleteSelfError extends Error {
-  constructor(message = "You cannot delete your own account.") {
-    super(message);
+  readonly key: string;
+
+  constructor(locale: string = "en") {
+    super(t(locale, "user.deleteSelf"));
+    this.key = "user.deleteSelf";
   }
 }
 
 export class CreateSystemError extends Error {
-  constructor(
-    message: string = "Can't create another user with role SuperAdmin",
-  ) {
-    super(message);
+  readonly key: string;
+
+  constructor(locale: string = "en") {
+    super(t(locale, "user.createSystemAdmin"));
+    this.key = "user.createSystemAdmin";
   }
 }
 
 export class UpdateSystemError extends Error {
-  constructor(
-    message: string = "Can't update status user with role SuperAdmin",
-  ) {
-    super(message);
+  readonly key: string;
+
+  constructor(locale: string = "en") {
+    super(t(locale, "user.updateSystemAdmin"));
+    this.key = "user.updateSystemAdmin";
   }
 }

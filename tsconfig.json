@@ -20,7 +20,8 @@
       "@libs/*": ["src/libs/*"],
       "@utils/*": ["src/utils/*"],
       "@middlewares/*": ["src/middlewares/*"],
-      "@generated/*": ["generated/*"]
+      "@generated/*": ["generated/*"],
+      "@locales/*": ["src/locales/*"]
     },
 
     "outDir": "dist"

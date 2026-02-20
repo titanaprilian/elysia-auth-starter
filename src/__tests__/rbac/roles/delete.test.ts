@@ -328,7 +328,9 @@ describe("DELETE /rbac/roles/:id", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.message).toContain("Invalid Reference");
+    expect(body.message).toContain(
+      "Invalid Reference: The 'roleId' does not exist.",
+    );
 
     const dbRole = await prisma.role.findUnique({
       where: { id: roleToCheck.id },

@@ -5,12 +5,15 @@ import { createBaseApp, createProtectedApp } from "@/libs/base";
 
 const protectedDashboard = createProtectedApp().get(
   "/",
-  async ({ set, log }) => {
+  async ({ set, log, locale }) => {
     const dashboard = await DashboardService.getDashboard(log);
     return successResponse(
       set,
       dashboard,
-      "Dashboard data retrieved successfully",
+      { key: "dashboard.dashboardSuccess" },
+      200,
+      undefined,
+      locale,
     );
   },
   {

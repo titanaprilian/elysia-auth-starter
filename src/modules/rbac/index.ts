@@ -14,10 +14,12 @@ import {
 import { errorResponse, successResponse } from "@/libs/response";
 import { createBaseApp, createProtectedApp } from "@/libs/base";
 import { hasPermission } from "@/middleware/permission";
-import { Prisma } from "@generated/prisma";
 import {
   DeleteSystemError,
+  ForeignKeyError,
   InvalidFeatureIdError,
+  RecordNotFoundError,
+  UniqueConstraintError,
   UpdateSystemError,
 } from "./error";
 
@@ -34,7 +36,7 @@ const protectedRbac = createProtectedApp()
   // -------------------------
   .get(
     "/features",
-    async ({ set, query, log }) => {
+    async ({ set, query, log, locale }) => {
       const { page = 1, limit = 10, search } = query;
 
       const { features, pagination } = await RbacService.getAllFeatures(
@@ -49,11 +51,12 @@ const protectedRbac = createProtectedApp()
       return successResponse(
         set,
         features,
-        "Features retrieved successfully",
+        { key: "rbac.featureNotFound" },
         200,
         {
           pagination,
         },
+        locale,
       );
     },
     {
@@ -67,9 +70,16 @@ const protectedRbac = createProtectedApp()
   )
   .post(
     "/features",
-    async ({ body, set, log }) => {
+    async ({ body, set, log, locale }) => {
       const feature = await RbacService.createFeature(body, log);
-      return successResponse(set, feature, "Feature created successfully", 201);
+      return successResponse(
+        set,
+        feature,
+        { key: "rbac.createFeatureSuccess" },
+        201,
+        undefined,
+        locale,
+      );
     },
     {
       beforeHandle: hasPermission(FEATURE_NAME, "create"),
@@ -83,9 +93,16 @@ const protectedRbac = createProtectedApp()
   )
   .patch(
     "/features/:id",
-    async ({ params: { id }, body, set, log }) => {
+    async ({ params: { id }, body, set, log, locale }) => {
       const feature = await RbacService.updateFeature(id, body, log);
-      return successResponse(set, feature, "Feature updated successfully");
+      return successResponse(
+        set,
+        feature,
+        { key: "rbac.updateFeatureSuccess" },
+        200,
+        undefined,
+        locale,
+      );
     },
     {
       beforeHandle: hasPermission(FEATURE_NAME, "update"),
@@ -100,12 +117,15 @@ const protectedRbac = createProtectedApp()
   )
   .delete(
     "/features/:id",
-    async ({ params: { id }, set, log }) => {
+    async ({ params: { id }, set, log, locale }) => {
       const deletedFeature = await RbacService.deleteFeature(id, log);
       return successResponse(
         set,
         deletedFeature,
-        "Feature deleted successfully",
+        { key: "rbac.deleteFeatureSuccess" },
+        200,
+        undefined,
+        locale,
       );
     },
     {
@@ -123,7 +143,7 @@ const protectedRbac = createProtectedApp()
   // -------------------------
   .get(
     "/roles",
-    async ({ query, set, log }) => {
+    async ({ query, set, log, locale }) => {
       const { page = 1, limit = 10, search, feature } = query;
 
       const { roles, pagination } = await RbacService.getAllRoles(
@@ -136,9 +156,16 @@ const protectedRbac = createProtectedApp()
         log,
       );
 
-      return successResponse(set, roles, "Roles retrieved successfully", 200, {
-        pagination,
-      });
+      return successResponse(
+        set,
+        roles,
+        { key: "rbac.createRoleSuccess" },
+        200,
+        {
+          pagination,
+        },
+        locale,
+      );
     },
     {
       query: GetRolesQuerySchema,
@@ -151,7 +178,7 @@ const protectedRbac = createProtectedApp()
   )
   .get(
     "/roles/options",
-    async ({ query, set, log }) => {
+    async ({ query, set, log, locale }) => {
       const { page, limit, search } = query;
       const { roles, pagination } = await RbacService.getRoleOptions(
         {
@@ -164,11 +191,12 @@ const protectedRbac = createProtectedApp()
       return successResponse(
         set,
         roles,
-        "Roles options retrieved successfully",
+        { key: "rbac.createRoleSuccess" },
         200,
         {
           pagination,
         },
+        locale,
       );
     },
     {
@@ -182,9 +210,16 @@ const protectedRbac = createProtectedApp()
   )
   .get(
     "/roles/:id",
-    async ({ params: { id }, set, log }) => {
+    async ({ params: { id }, set, log, locale }) => {
       const role = await RbacService.getRole(id, log);
-      return successResponse(set, role, "Role details retrieved successfully");
+      return successResponse(
+        set,
+        role,
+        { key: "rbac.roleNotFound" },
+        200,
+        undefined,
+        locale,
+      );
     },
     {
       beforeHandle: hasPermission(FEATURE_NAME, "read"),
@@ -198,9 +233,16 @@ const protectedRbac = createProtectedApp()
   )
   .get(
     "/roles/me",
-    async ({ user, set, log }) => {
+    async ({ user, set, log, locale }) => {
       const myRole = await RbacService.getMyRole(user.id, log);
-      return successResponse(set, myRole, "My role retrieved successfully");
+      return successResponse(
+        set,
+        myRole,
+        { key: "rbac.roleNotFound" },
+        200,
+        undefined,
+        locale,
+      );
     },
     {
       response: {
@@ -211,9 +253,17 @@ const protectedRbac = createProtectedApp()
   )
   .post(
     "/roles",
-    async ({ body, set, log }) => {
+    async ({ body, set, log, locale }) => {
       const newRole = await RbacService.createRole(body, log);
-      return successResponse(set, newRole, "Role created successfully", 201);
+
+      return successResponse(
+        set,
+        newRole,
+        { key: "rbac.createRoleSuccess" },
+        201,
+        undefined,
+        locale,
+      );
     },
     {
       beforeHandle: hasPermission(FEATURE_NAME, "create"),
@@ -227,9 +277,16 @@ const protectedRbac = createProtectedApp()
   )
   .patch(
     "/roles/:id",
-    async ({ params: { id }, body, set, log }) => {
+    async ({ params: { id }, body, set, log, locale }) => {
       const updatedRole = await RbacService.updateRole(id, body, log);
-      return successResponse(set, updatedRole, "Role updated successfully");
+      return successResponse(
+        set,
+        updatedRole,
+        { key: "rbac.updateRoleSuccess" },
+        200,
+        undefined,
+        locale,
+      );
     },
     {
       beforeHandle: hasPermission(FEATURE_NAME, "update"),
@@ -244,9 +301,16 @@ const protectedRbac = createProtectedApp()
   )
   .delete(
     "/roles/:id",
-    async ({ params: { id }, set, log }) => {
+    async ({ params: { id }, set, log, locale }) => {
       const deletedRole = await RbacService.deleteRole(id, log);
-      return successResponse(set, deletedRole, "Role deleted successfully");
+      return successResponse(
+        set,
+        deletedRole,
+        { key: "rbac.deleteRoleSuccess" },
+        200,
+        undefined,
+        locale,
+      );
     },
     {
       beforeHandle: hasPermission(FEATURE_NAME, "delete"),
@@ -264,61 +328,44 @@ const protectedRbac = createProtectedApp()
  */
 export const rbac = createBaseApp({ tags: ["RBAC"] }).group("/rbac", (app) =>
   app
-    .onError(({ error, set }) => {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2003"
-      ) {
-        const rawField = (error.meta?.field_name as string) || "unknown";
-        const match = rawField.match(/_([a-zA-Z0-9]+)_fkey/);
-        const fieldName = match ? match[1] : rawField;
-
+    .onError(({ error, set, locale }) => {
+      if (error instanceof ForeignKeyError) {
         return errorResponse(
           set,
           400,
-          `Invalid Reference: The ID provided for '${fieldName}' does not exist.`,
+          { key: error.key, params: { fieldName: error.field } },
+          null,
+          locale,
         );
       }
 
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        const target = (error.meta?.target as string[])?.join(", ") || "field";
+      if (error instanceof UniqueConstraintError) {
         return errorResponse(
           set,
           409,
-          `Duplicate value for unique field: ${target}`,
+          { key: error.key, params: { field: error.field } },
+          null,
+          locale,
         );
       }
 
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2025"
-      ) {
-        return errorResponse(set, 404, "Resource not found");
-      }
-
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2003"
-      ) {
-        if (error.meta?.field_name?.toString().includes("User_roleId_fkey")) {
-          return errorResponse(
-            set,
-            409,
-            "Cannot delete Role: It is currently assigned to one or more users.",
-          );
-        }
-
-        return errorResponse(set, 400, "Invalid Reference...");
+      if (error instanceof RecordNotFoundError) {
+        return errorResponse(
+          set,
+          404,
+          { key: "common.notFound" },
+          null,
+          locale,
+        );
       }
 
       if (error instanceof DeleteSystemError) {
         return errorResponse(
           set,
           403,
-          "Operation Forbidden: This is a protected system feature and cannot be deleted.",
+          { key: "rbac.deleteSystemRole" },
+          null,
+          locale,
         );
       }
 
@@ -326,12 +373,20 @@ export const rbac = createBaseApp({ tags: ["RBAC"] }).group("/rbac", (app) =>
         return errorResponse(
           set,
           403,
-          "Operation Forbidden: This is a protected system feature and cannot be updated.",
+          { key: "rbac.updateSystemRole" },
+          null,
+          locale,
         );
       }
 
       if (error instanceof InvalidFeatureIdError) {
-        return errorResponse(set, 400, error.message);
+        return errorResponse(
+          set,
+          400,
+          { key: "rbac.invalidFeatureId" },
+          null,
+          locale,
+        );
       }
     })
     .use(protectedRbac),

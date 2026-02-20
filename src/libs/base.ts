@@ -1,6 +1,7 @@
 import { Elysia, type ElysiaConfig } from "elysia";
 import { loggerMiddleware } from "@/middleware/logger";
 import { authMiddleware } from "@/middleware/auth";
+import { i18nMiddleware } from "@/middleware/i18n";
 import { errorResponse } from "./response";
 import { AccountDisabledError, UnauthorizedError } from "./exceptions";
 
@@ -14,7 +15,8 @@ export const createBaseApp = <Prefix extends string = "">(
   config?: ElysiaConfig<Prefix>,
 ) =>
   new Elysia(config)
-    .onError(({ code, error, set }) => {
+    .use(i18nMiddleware)
+    .onError(({ code, error, set, locale }) => {
       if (code === "VALIDATION") {
         const issues = error.all.map((issue: any) => {
           let field = "root";
@@ -36,7 +38,13 @@ export const createBaseApp = <Prefix extends string = "">(
           };
         });
 
-        return errorResponse(set, 400, "Validation Error", issues);
+        return errorResponse(
+          set,
+          400,
+          { key: "common.badRequest", params: { field: "validation" } },
+          issues,
+          locale,
+        );
       }
     })
     .use(loggerMiddleware)
@@ -52,11 +60,17 @@ export const createProtectedApp = <Prefix extends string = "">(
   config?: ElysiaConfig<Prefix>,
 ) =>
   createBaseApp(config)
-    .onError(({ error, set }) => {
-      if (error instanceof UnauthorizedError)
-        return errorResponse(set, 401, error.message);
-      if (error instanceof AccountDisabledError)
-        return errorResponse(set, 403, error.message);
+    .onError(({ error, set, locale }) => {
+      if (error instanceof UnauthorizedError) {
+        const key =
+          (error as unknown as { key: string }).key || "common.unauthorized";
+        return errorResponse(set, 401, { key }, null, locale);
+      }
+      if (error instanceof AccountDisabledError) {
+        const key =
+          (error as unknown as { key: string }).key || "auth.accountDisabled";
+        return errorResponse(set, 403, { key }, null, locale);
+      }
     })
     .guard({
       detail: {

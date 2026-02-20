@@ -18,7 +18,7 @@ const FEATURE_NAME = "user_management";
 const protectedUser = createProtectedApp()
   .get(
     "/",
-    async ({ query, set, log }) => {
+    async ({ query, set, log, locale }) => {
       const { page = 1, limit = 10, isActive, roleId, search } = query;
 
       const { users, pagination } = await UserService.getUsers(
@@ -32,9 +32,16 @@ const protectedUser = createProtectedApp()
         log,
       );
 
-      return successResponse(set, users, "Users retrieved successfully", 200, {
-        pagination,
-      });
+      return successResponse(
+        set,
+        users,
+        { key: "user.listSuccess" },
+        200,
+        {
+          pagination,
+        },
+        locale,
+      );
     },
     {
       query: GetUsersQuerySchema,
@@ -47,9 +54,16 @@ const protectedUser = createProtectedApp()
   )
   .post(
     "/",
-    async ({ body, set, log }) => {
-      const data = await UserService.createUser(body, log);
-      return successResponse(set, data, "User Succesfully Created", 201);
+    async ({ body, set, log, locale }) => {
+      const data = await UserService.createUser(body, log, locale);
+      return successResponse(
+        set,
+        data,
+        { key: "user.createSuccess" },
+        201,
+        undefined,
+        locale,
+      );
     },
     {
       beforeHandle: hasPermission(FEATURE_NAME, "create"),
@@ -64,13 +78,26 @@ const protectedUser = createProtectedApp()
   )
   .get(
     "/:id",
-    async ({ params, set, log }) => {
+    async ({ params, set, log, locale }) => {
       const user = await UserService.getUser(params.id, log);
       if (!user) {
-        return errorResponse(set, 404, "User Not Found");
+        return errorResponse(
+          set,
+          404,
+          { key: "user.userNotFound" },
+          null,
+          locale,
+        );
       }
 
-      return successResponse(set, user, "User details retrieved", 200);
+      return successResponse(
+        set,
+        user,
+        { key: "user.getSuccess" },
+        200,
+        undefined,
+        locale,
+      );
     },
     {
       beforeHandle: hasPermission(FEATURE_NAME, "read"),
@@ -84,14 +111,21 @@ const protectedUser = createProtectedApp()
   )
   .patch(
     "/:id",
-    async ({ body, params, set, log }) => {
-      const updatedUser = await UserService.updateUser(params.id, body, log);
+    async ({ body, params, set, log, locale }) => {
+      const updatedUser = await UserService.updateUser(
+        params.id,
+        body,
+        log,
+        locale,
+      );
 
       return successResponse(
         set,
         updatedUser,
-        "User updated successfully",
+        { key: "user.updateSuccess" },
         200,
+        undefined,
+        locale,
       );
     },
     {
@@ -108,13 +142,20 @@ const protectedUser = createProtectedApp()
   )
   .delete(
     "/:id",
-    async ({ params, user, set, log }) => {
-      const deletedUser = await UserService.deleteUser(params.id, user.id, log);
+    async ({ params, user, set, log, locale }) => {
+      const deletedUser = await UserService.deleteUser(
+        params.id,
+        user.id,
+        log,
+        locale,
+      );
       return successResponse(
         set,
         deletedUser,
-        "User Successfully Deleted",
+        { key: "user.deleteSuccess" },
         200,
+        undefined,
+        locale,
       );
     },
     {
@@ -130,7 +171,7 @@ const protectedUser = createProtectedApp()
 
 export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
   app
-    .onError(({ error, set }) => {
+    .onError(({ error, set, locale }) => {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2003"
@@ -142,7 +183,9 @@ export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
         return errorResponse(
           set,
           400,
-          `Invalid Reference: The ID provided for '${fieldName}' does not exist.`,
+          { key: "common.badRequest", params: { field: fieldName } },
+          null,
+          locale,
         );
       }
 
@@ -154,7 +197,9 @@ export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
         return errorResponse(
           set,
           409,
-          `Duplicate value for unique field: ${target}`,
+          { key: "common.error", params: { field: target } },
+          null,
+          locale,
         );
       }
 
@@ -162,14 +207,22 @@ export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2025"
       ) {
-        return errorResponse(set, 404, "Resource not found");
+        return errorResponse(
+          set,
+          404,
+          { key: "common.notFound" },
+          null,
+          locale,
+        );
       }
 
       if (error instanceof DeleteSystemError) {
         return errorResponse(
           set,
           403,
-          "Operation Forbidden: This is a protected user and cannot be deleted",
+          { key: "user.deleteSelf" },
+          null,
+          locale,
         );
       }
 
@@ -177,7 +230,9 @@ export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
         return errorResponse(
           set,
           403,
-          "Operation Forbidden: You cannot delete your own account",
+          { key: "user.deleteSelf" },
+          null,
+          locale,
         );
       }
 
@@ -185,7 +240,9 @@ export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
         return errorResponse(
           set,
           403,
-          "Operation Forbidden: You cannot create user with SuperAdmin role more than one",
+          { key: "user.createSystemAdmin" },
+          null,
+          locale,
         );
       }
 
@@ -193,7 +250,9 @@ export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
         return errorResponse(
           set,
           403,
-          "Operation Forbidden: You cannot update user status to inactive with SuperAdmin role",
+          { key: "user.updateSystemAdmin" },
+          null,
+          locale,
         );
       }
     })

@@ -105,7 +105,11 @@ export abstract class UserService {
     };
   }
 
-  static async createUser(data: CreateUserInput, log: Logger) {
+  static async createUser(
+    data: CreateUserInput,
+    log: Logger,
+    locale: string = "en",
+  ) {
     log.debug({ email: data.email, roleId: data.roleId }, "Creating new user");
 
     // 🛡️ SECURITY CHECK: Duplicate SuperAdmin
@@ -120,7 +124,7 @@ export abstract class UserService {
         { email: data.email, roleId: data.roleId },
         "User creation blocked: Attempt to create duplicate SuperAdmin",
       );
-      throw new CreateSystemError();
+      throw new CreateSystemError(locale);
     }
 
     const hashedPassword = await Bun.password.hash(data.password);
@@ -173,7 +177,12 @@ export abstract class UserService {
     };
   }
 
-  static async updateUser(id: string, data: UpdateUserInput, log: Logger) {
+  static async updateUser(
+    id: string,
+    data: UpdateUserInput,
+    log: Logger,
+    locale: string = "en",
+  ) {
     log.debug({ userId: id }, "Updating user");
 
     const updateData = { ...data };
@@ -194,7 +203,7 @@ export abstract class UserService {
           { userId: id },
           "User update blocked: Attempt to deactivate SuperAdmin",
         );
-        throw new UpdateSystemError();
+        throw new UpdateSystemError(locale);
       }
     }
 
@@ -217,6 +226,7 @@ export abstract class UserService {
     targetId: string,
     requestingUserId: string,
     log: Logger,
+    locale: string = "en",
   ) {
     log.debug(
       { targetUserId: targetId, requestingUserId },
@@ -229,7 +239,7 @@ export abstract class UserService {
         { targetUserId: targetId },
         "User deletion blocked: Self-deletion attempt",
       );
-      throw new DeleteSelfError();
+      throw new DeleteSelfError(locale);
     }
 
     // Fetch user + Role to check permissions

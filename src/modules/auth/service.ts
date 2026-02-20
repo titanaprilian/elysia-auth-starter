@@ -6,7 +6,7 @@ import { env } from "@/config/env";
 import type { Logger } from "pino";
 
 export abstract class AuthService {
-  static async login(data: LoginInput, log: Logger) {
+  static async login(data: LoginInput, log: Logger, locale: string = "en") {
     const email = data.email.toLowerCase();
     log.debug({ email }, "Login attempt initiated");
 
@@ -26,7 +26,7 @@ export abstract class AuthService {
 
     if (!user.isActive) {
       log.warn({ email }, "Login failed: Account disabled");
-      throw new AccountDisabledError("Your account has been disabled.");
+      throw new AccountDisabledError(locale);
     }
 
     log.info({ userId: user.id, email }, "User logged in successfully");
@@ -58,11 +58,13 @@ export abstract class AuthService {
     tokenVersion,
     refreshToken,
     log,
+    locale = "en",
   }: {
     userId: string;
     tokenVersion: number;
     refreshToken: string;
     log: Logger;
+    locale?: string;
   }) {
     log.debug({ userId }, "Refresh token flow initiated");
 
@@ -74,7 +76,7 @@ export abstract class AuthService {
     if (!storedToken) {
       // This might be a client bug or a brute-force attempt
       log.warn({ userId }, "Refresh failed: Token not found in DB");
-      throw new UnauthorizedError("Invalid refresh token");
+      throw new UnauthorizedError(locale, "auth.refreshFailed");
     }
 
     // Reuse detection
@@ -97,7 +99,7 @@ export abstract class AuthService {
         }),
       ]);
 
-      throw new UnauthorizedError("Token has been revoked");
+      throw new UnauthorizedError(locale, "auth.tokenBlacklisted");
     }
 
     // Expiration check
@@ -107,14 +109,14 @@ export abstract class AuthService {
         { userId, tokenId: storedToken.id, expiresAt: storedToken.expiresAt },
         "Refresh failed: Token expired",
       );
-      throw new UnauthorizedError();
+      throw new UnauthorizedError(locale, "auth.refreshFailed");
     }
     const user = storedToken.user;
 
     // User validation
     if (!user.isActive) {
       log.warn({ userId }, "Refresh failed: Account is disabled");
-      throw new AccountDisabledError("Your account has been disabled.");
+      throw new AccountDisabledError(locale);
     }
 
     if (user.tokenVersion !== tokenVersion) {
@@ -126,7 +128,7 @@ export abstract class AuthService {
         },
         "Refresh failed: Version mismatch (Password changed or Logout All)",
       );
-      throw new UnauthorizedError("Token has been revoked");
+      throw new UnauthorizedError(locale, "auth.invalidToken");
     }
 
     // Rotate refresh token and calculate duration
@@ -216,10 +218,12 @@ export abstract class AuthService {
     userId,
     requestingTokenId,
     log,
+    locale = "en",
   }: {
     userId: string;
     requestingTokenId: string;
     log: Logger;
+    locale?: string;
   }) {
     log.info({ userId }, "Logout-All initiated (Revoking all sessions)");
 
@@ -233,7 +237,7 @@ export abstract class AuthService {
         { userId, tokenId: requestingTokenId },
         "Logout-All blocked: Initiating token is revoked or invalid",
       );
-      throw new UnauthorizedError("Invalid refresh token");
+      throw new UnauthorizedError(locale, "auth.invalidToken");
     }
 
     const [revokedBatch] = await prisma.$transaction([
@@ -254,7 +258,7 @@ export abstract class AuthService {
     );
   }
 
-  static async me(userId: string, log: Logger) {
+  static async me(userId: string, log: Logger, locale: string = "en") {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -277,7 +281,7 @@ export abstract class AuthService {
         "Profile fetch failed: User ID from token not found in DB",
       );
 
-      throw new UnauthorizedError("User no longer exists");
+      throw new UnauthorizedError(locale, "auth.invalidToken");
     }
 
     log.debug({ userId }, "User profile fetched");

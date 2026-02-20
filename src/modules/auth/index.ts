@@ -32,11 +32,17 @@ const publicAuth = createBaseApp()
   .use(refreshJwt)
   .post(
     "/login",
-    async ({ body, set, cookie, log, accessJwt, refreshJwt }) => {
-      const user = await AuthService.login(body, log);
+    async ({ body, set, cookie, log, accessJwt, refreshJwt, locale }) => {
+      const user = await AuthService.login(body, log, locale);
 
       if (!user) {
-        return errorResponse(set, 401, "Invalid email or password");
+        return errorResponse(
+          set,
+          401,
+          { key: "auth.invalidCredentials" },
+          null,
+          locale,
+        );
       }
 
       const tokenId = await AuthService.createRefreshToken(user.id);
@@ -69,8 +75,10 @@ const publicAuth = createBaseApp()
             name: user.name,
           },
         },
-        "User login successfully",
+        { key: "auth.loginSuccess" },
         200,
+        undefined,
+        locale,
       );
     },
     {
@@ -87,12 +95,18 @@ const publicAuth = createBaseApp()
   )
   .post(
     "/refresh",
-    async ({ body, set, cookie, log, accessJwt, refreshJwt }) => {
+    async ({ body, set, cookie, log, accessJwt, refreshJwt, locale }) => {
       const incomingRefreshToken =
         cookie.refresh_token.value || body.refresh_token;
 
       if (!incomingRefreshToken) {
-        return errorResponse(set, 400, "Refresh token is missing");
+        return errorResponse(
+          set,
+          400,
+          { key: "auth.tokenRequired" },
+          null,
+          locale,
+        );
       }
 
       const payload = await refreshJwt.verify(incomingRefreshToken as string);
@@ -103,7 +117,13 @@ const publicAuth = createBaseApp()
         typeof payload.sub !== "string" ||
         typeof payload.tv !== "number"
       ) {
-        return errorResponse(set, 401, "Unauthorized");
+        return errorResponse(
+          set,
+          401,
+          { key: "auth.refreshFailed" },
+          null,
+          locale,
+        );
       }
 
       const data = await AuthService.refresh({
@@ -111,6 +131,7 @@ const publicAuth = createBaseApp()
         userId: payload.sub,
         tokenVersion: payload.tv,
         log,
+        locale,
       });
 
       const newAccessToken = await accessJwt.sign({
@@ -137,8 +158,10 @@ const publicAuth = createBaseApp()
           refresh_token: newRefreshToken,
           user: data.user,
         },
-        "Token refreshed successfully",
+        { key: "auth.refreshSuccess" },
         200,
+        undefined,
+        locale,
       );
     },
     {
@@ -153,7 +176,7 @@ const publicAuth = createBaseApp()
   )
   .post(
     "/logout",
-    async ({ body, set, log, cookie, refreshJwt }) => {
+    async ({ body, set, log, cookie, refreshJwt, locale }) => {
       const incomingRefreshToken =
         cookie.refresh_token.value || body.refresh_token;
 
@@ -175,7 +198,14 @@ const publicAuth = createBaseApp()
         maxAge: 0,
       });
 
-      return successResponse(set, null, "Logged out successfully", 200);
+      return successResponse(
+        set,
+        null,
+        { key: "auth.logoutSuccess" },
+        200,
+        undefined,
+        locale,
+      );
     },
     {
       body: TokenSchema,
@@ -196,7 +226,7 @@ const protectedAuth = createProtectedApp()
   .use(refreshJwt)
   .post(
     "/logout/all",
-    async ({ user, body, log, cookie, set, refreshJwt }) => {
+    async ({ user, body, log, cookie, set, refreshJwt, locale }) => {
       const incomingRefreshToken =
         cookie.refresh_token.value || body.refresh_token;
 
@@ -204,25 +234,40 @@ const protectedAuth = createProtectedApp()
         return errorResponse(
           set,
           400,
-          "Refresh token is required to confirm identity",
+          { key: "auth.tokenRequired" },
+          null,
+          locale,
         );
       }
 
       const payload = await refreshJwt.verify(incomingRefreshToken as string);
 
       if (!payload || !payload.jti || typeof payload.sub !== "string") {
-        return errorResponse(set, 401, "Invalid refresh token");
+        return errorResponse(
+          set,
+          401,
+          { key: "auth.invalidToken" },
+          null,
+          locale,
+        );
       }
 
       // This prevents User A from using their Access Token to revoke User B's session
       if (payload.sub !== user.id) {
-        return errorResponse(set, 403, "Token mismatch");
+        return errorResponse(
+          set,
+          403,
+          { key: "auth.invalidToken" },
+          null,
+          locale,
+        );
       }
 
       await AuthService.logoutAll({
         userId: user.id,
         requestingTokenId: payload.jti,
         log,
+        locale,
       });
 
       cookie.refresh_token.set({
@@ -231,7 +276,14 @@ const protectedAuth = createProtectedApp()
         maxAge: 0,
       });
 
-      return successResponse(set, null, "Logged out from all devices", 200);
+      return successResponse(
+        set,
+        null,
+        { key: "auth.logoutAllSuccess" },
+        200,
+        undefined,
+        locale,
+      );
     },
     {
       body: TokenSchema,
@@ -246,8 +298,8 @@ const protectedAuth = createProtectedApp()
   )
   .get(
     "/me",
-    async ({ user, log, set }) => {
-      const data = await AuthService.me(user.id, log);
+    async ({ user, log, set, locale }) => {
+      const data = await AuthService.me(user.id, log, locale);
 
       return successResponse(
         set,
@@ -259,8 +311,10 @@ const protectedAuth = createProtectedApp()
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
         },
-        "Data user successfully retrieved",
+        { key: "user.getSuccess" },
         200,
+        undefined,
+        locale,
       );
     },
     {

@@ -7,9 +7,16 @@ export const health = createBaseApp({
   tags: ["Health"],
 }).get(
   "/health",
-  async ({ set }) => {
+  async ({ set, locale }) => {
     const healthCheck = await HealthService.check();
-    return successResponse(set, healthCheck, "Server up and running", 200);
+    return successResponse(
+      set,
+      healthCheck,
+      { key: "health.serverUp" },
+      200,
+      undefined,
+      locale,
+    );
   },
   {
     response: {

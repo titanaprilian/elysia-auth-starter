@@ -60,7 +60,7 @@ export async function createAuthenticatedUser(userOverrides: any = {}) {
   );
 
   const body = await loginRes.json();
-  const token = body.data.access_token;
+  const token = body.data?.access_token;
 
   return {
     user,
