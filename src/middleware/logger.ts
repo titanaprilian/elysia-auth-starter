@@ -12,19 +12,28 @@ export const loggerMiddleware = new Elysia()
       log: logger.child({ requestId }),
     };
   })
-  .onAfterResponse(({ request, set, startTime, requestId }) => {
+  .onAfterResponse(({ request, set, startTime, requestId, store }) => {
     const url = new URL(request.url);
 
     if (url.pathname === "/favicon.ico") {
       return;
     }
 
+    if ((store as Record<string, boolean>).__loggerLogged) {
+      return;
+    }
+    (store as Record<string, boolean>).__loggerLogged = true;
+
     const start = startTime || Date.now();
     const durationMs = Date.now() - start;
 
     const status = set.status || 200;
     const level =
-      Number(status) >= 500 ? "error" : Number(status) >= 400 ? "warn" : "info";
+      Number(status) >= 500
+        ? "error"
+        : Number(status) >= 400
+          ? "warn"
+          : "debug";
 
     logger[level](
       {
