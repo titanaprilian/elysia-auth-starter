@@ -1,27 +1,13 @@
 import { createBaseApp } from "@/libs/base";
-import { HealthService } from "./service";
-import { HealthModel } from "./model";
-import { successResponse } from "@/libs/response";
+import { HealthController } from "./controller";
+import { HealthResponse } from "./schema";
 
-export const health = createBaseApp({
-  tags: ["Health"],
-}).get(
+export const health = createBaseApp({ tags: ["Health"] }).get(
   "/health",
-  async ({ set, locale }) => {
-    const healthCheck = await HealthService.check();
-    return successResponse(
-      set,
-      healthCheck,
-      { key: "health.serverUp" },
-      200,
-      undefined,
-      locale,
-    );
-  },
+  HealthController.getHealth,
   {
     response: {
-      200: HealthModel.ok,
-      503: HealthModel.shuttingDown,
+      200: HealthResponse,
     },
   },
 );

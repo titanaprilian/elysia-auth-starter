@@ -17,6 +17,33 @@ export const createBaseApp = <Prefix extends string = "">(
   new Elysia(config)
     .use(i18nMiddleware)
     .onError(({ code, error, set, locale }) => {
+      if (
+        code === "UNKNOWN" &&
+        (error.message.startsWith("String must be") ||
+          error.message.includes("Duplicate featureId") ||
+          error.message.includes("defaultPermissions must be") ||
+          error.message.includes("defaultPermissions."))
+      ) {
+        let field = "name";
+        if (error.message.includes("Duplicate featureId")) {
+          field = "permissions";
+        } else if (error.message.includes("defaultPermissions")) {
+          field = "defaultPermissions";
+        }
+        return errorResponse(
+          set,
+          400,
+          { key: "common.badRequest", params: { field: "validation" } },
+          [
+            {
+              field,
+              message: error.message,
+            },
+          ],
+          locale,
+        );
+      }
+
       if (code === "VALIDATION") {
         const issues = error.all.map((issue: any) => {
           let field = "root";
@@ -46,6 +73,18 @@ export const createBaseApp = <Prefix extends string = "">(
           locale,
         );
       }
+
+      if (error instanceof UnauthorizedError) {
+        const key =
+          (error as unknown as { key: string }).key || "common.unauthorized";
+        return errorResponse(set, 401, { key }, null, locale);
+      }
+
+      if (error instanceof AccountDisabledError) {
+        const key =
+          (error as unknown as { key: string }).key || "auth.accountDisabled";
+        return errorResponse(set, 403, { key }, null, locale);
+      }
     })
     .use(loggerMiddleware)
     .as("scoped");
@@ -60,18 +99,6 @@ export const createProtectedApp = <Prefix extends string = "">(
   config?: ElysiaConfig<Prefix>,
 ) =>
   createBaseApp(config)
-    .onError(({ error, set, locale }) => {
-      if (error instanceof UnauthorizedError) {
-        const key =
-          (error as unknown as { key: string }).key || "common.unauthorized";
-        return errorResponse(set, 401, { key }, null, locale);
-      }
-      if (error instanceof AccountDisabledError) {
-        const key =
-          (error as unknown as { key: string }).key || "auth.accountDisabled";
-        return errorResponse(set, 403, { key }, null, locale);
-      }
-    })
     .guard({
       detail: {
         security: [

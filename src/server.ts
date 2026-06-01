@@ -26,7 +26,7 @@ export const app = new Elysia()
         "Accept-Language",
         "accept-language",
       ],
-      exposedHeaders: ["Content-Language"],
+      exposeHeaders: ["Content-Language"],
     }),
   )
   .use(

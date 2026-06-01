@@ -26,4 +26,16 @@ export abstract class HealthService {
       db,
     };
   }
+
+  static async getHealthDetails() {
+    const checkResult = await this.check();
+    return {
+      status: checkResult.status,
+      timestamp: checkResult.timestamp,
+      uptime: checkResult.uptime,
+      database: {
+        status: "db" in checkResult ? checkResult.db : "down",
+      },
+    };
+  }
 }

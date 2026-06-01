@@ -1,12 +1,17 @@
-import { UserService } from "./service";
-import { UserModel } from "./model";
+import { UserController } from "./controller";
 import {
   CreateUserSchema,
   GetUsersQuerySchema,
   UpdateUserSchema,
   UserParamSchema,
+  UserResponseSchema,
+  UsersResponseSchema,
+  UserCreateResultResponseSchema,
+  UserDeleteResultResponseSchema,
+  UserErrorSchema,
+  UserValidationErrorSchema,
 } from "./schema";
-import { errorResponse, successResponse } from "@/libs/response";
+import { errorResponse } from "@/libs/response";
 import { createBaseApp, createProtectedApp } from "@/libs/base";
 import { hasPermission } from "@/middleware/permission";
 import { Prisma } from "@generated/prisma";
@@ -16,158 +21,53 @@ import { CreateSystemError, DeleteSelfError, UpdateSystemError } from "./error";
 const FEATURE_NAME = "user_management";
 
 const protectedUser = createProtectedApp()
-  .get(
-    "/",
-    async ({ query, set, log, locale }) => {
-      const { page = 1, limit = 10, isActive, roleId, search } = query;
-
-      const { users, pagination } = await UserService.getUsers(
-        {
-          page,
-          limit,
-          isActive,
-          roleId,
-          search,
-        },
-        log,
-      );
-
-      return successResponse(
-        set,
-        users,
-        { key: "user.listSuccess" },
-        200,
-        {
-          pagination,
-        },
-        locale,
-      );
+  .get("/", UserController.getUsers, {
+    query: GetUsersQuerySchema,
+    beforeHandle: hasPermission(FEATURE_NAME, "read"),
+    response: {
+      200: UsersResponseSchema,
+      500: UserErrorSchema,
     },
-    {
-      query: GetUsersQuerySchema,
-      beforeHandle: hasPermission(FEATURE_NAME, "read"),
-      response: {
-        200: UserModel.users,
-        500: UserModel.error,
-      },
+  })
+  .post("/", UserController.createUser, {
+    beforeHandle: hasPermission(FEATURE_NAME, "create"),
+    body: CreateUserSchema,
+    response: {
+      201: UserCreateResultResponseSchema,
+      400: UserValidationErrorSchema,
+      409: UserErrorSchema,
+      500: UserErrorSchema,
     },
-  )
-  .post(
-    "/",
-    async ({ body, set, log, locale }) => {
-      const data = await UserService.createUser(body, log, locale);
-      return successResponse(
-        set,
-        data,
-        { key: "user.createSuccess" },
-        201,
-        undefined,
-        locale,
-      );
+  })
+  .get("/:id", UserController.getUser, {
+    beforeHandle: hasPermission(FEATURE_NAME, "read"),
+    params: UserParamSchema,
+    response: {
+      200: UserResponseSchema,
+      404: UserErrorSchema,
+      500: UserErrorSchema,
     },
-    {
-      beforeHandle: hasPermission(FEATURE_NAME, "create"),
-      body: CreateUserSchema,
-      response: {
-        201: UserModel.createResult,
-        400: UserModel.validationError,
-        409: UserModel.error,
-        500: UserModel.error,
-      },
+  })
+  .patch("/:id", UserController.updateUser, {
+    beforeHandle: hasPermission(FEATURE_NAME, "update"),
+    params: UserParamSchema,
+    body: UpdateUserSchema,
+    response: {
+      200: UserCreateResultResponseSchema,
+      400: UserValidationErrorSchema,
+      404: UserErrorSchema,
+      500: UserErrorSchema,
     },
-  )
-  .get(
-    "/:id",
-    async ({ params, set, log, locale }) => {
-      const user = await UserService.getUser(params.id, log);
-      if (!user) {
-        return errorResponse(
-          set,
-          404,
-          { key: "user.userNotFound" },
-          null,
-          locale,
-        );
-      }
-
-      return successResponse(
-        set,
-        user,
-        { key: "user.getSuccess" },
-        200,
-        undefined,
-        locale,
-      );
+  })
+  .delete("/:id", UserController.deleteUser, {
+    beforeHandle: hasPermission(FEATURE_NAME, "delete"),
+    params: UserParamSchema,
+    response: {
+      200: UserDeleteResultResponseSchema,
+      404: UserErrorSchema,
+      500: UserErrorSchema,
     },
-    {
-      beforeHandle: hasPermission(FEATURE_NAME, "read"),
-      params: UserParamSchema,
-      response: {
-        200: UserModel.user,
-        404: UserModel.error,
-        500: UserModel.error,
-      },
-    },
-  )
-  .patch(
-    "/:id",
-    async ({ body, params, set, log, locale }) => {
-      const updatedUser = await UserService.updateUser(
-        params.id,
-        body,
-        log,
-        locale,
-      );
-
-      return successResponse(
-        set,
-        updatedUser,
-        { key: "user.updateSuccess" },
-        200,
-        undefined,
-        locale,
-      );
-    },
-    {
-      beforeHandle: hasPermission(FEATURE_NAME, "update"),
-      params: UserParamSchema,
-      body: UpdateUserSchema,
-      response: {
-        200: UserModel.createResult,
-        400: UserModel.validationError,
-        404: UserModel.error,
-        500: UserModel.error,
-      },
-    },
-  )
-  .delete(
-    "/:id",
-    async ({ params, user, set, log, locale }) => {
-      const deletedUser = await UserService.deleteUser(
-        params.id,
-        user.id,
-        log,
-        locale,
-      );
-      return successResponse(
-        set,
-        deletedUser,
-        { key: "user.deleteSuccess" },
-        200,
-        undefined,
-        locale,
-      );
-    },
-    {
-      beforeHandle: hasPermission(FEATURE_NAME, "delete"),
-      params: UserParamSchema,
-      response: {
-        200: UserModel.deleteResult,
-        404: UserModel.error,
-        500: UserModel.error,
-      },
-    },
-  );
+  });
 
 export const user = createBaseApp({ tags: ["User"] }).group("/users", (app) =>
   app
