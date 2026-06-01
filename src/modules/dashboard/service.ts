@@ -1,9 +1,9 @@
 import { prisma } from "@/libs/prisma";
 import type { Logger } from "pino";
-import type { DashboardData } from "./model";
+import type { DashboardResponse } from "./schema";
 
 export abstract class DashboardService {
-  static async getDashboard(log: Logger): Promise<DashboardData> {
+  static async getDashboard(log: Logger): Promise<DashboardResponse> {
     log.debug("Fetching dashboard data");
 
     const [
