@@ -47,3 +47,7 @@ package-lock.json
 
 # build output
 /dist/
+
+# agent skills
+.agents/
+

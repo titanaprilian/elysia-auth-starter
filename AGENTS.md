@@ -81,6 +81,7 @@ bun run prepare                # Configure Husky git hooks
 ## References
 
 For deep-dives on patterns, standards, and step-by-step templates:
-- **Code Style & i18n Guidelines**: @.claude/code-style.md
-- **Testing & Test DB Setup**: @.claude/testing.md
-- **Feature Implementation Walkthrough**: @.claude/feature-template.md
+- **Code Style & i18n Guidelines**: [.agents/skills/code-review/references/code-style.md](file:///home/titanic/dev/web/node/elysia-auth-starter/.agents/skills/code-review/references/code-style.md)
+- **Testing & Test DB Setup**: [.agents/skills/code-review/references/testing.md](file:///home/titanic/dev/web/node/elysia-auth-starter/.agents/skills/code-review/references/testing.md)
+- **Feature Implementation Walkthrough**: [.agents/skills/writing-plans/references/feature-template.md](file:///home/titanic/dev/web/node/elysia-auth-starter/.agents/skills/writing-plans/references/feature-template.md) / [executing-plans version](file:///home/titanic/dev/web/node/elysia-auth-starter/.agents/skills/executing-plans/references/feature-template.md)
+
