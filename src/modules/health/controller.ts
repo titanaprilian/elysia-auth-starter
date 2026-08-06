@@ -3,21 +3,8 @@ import { HealthService } from "./service";
 import type { Context } from "elysia";
 
 export class HealthController {
-  static async getHealth({
-    set,
-    locale,
-  }: {
-    set: Context["set"];
-    locale: string;
-  }) {
+  static async getHealth({ set }: { set: Context["set"] }) {
     const details = await HealthService.getHealthDetails();
-    return successResponse(
-      set,
-      details,
-      { key: "health.serverUp" },
-      200,
-      undefined,
-      locale,
-    );
+    return successResponse(set, details, "SERVER_UP", 200, undefined);
   }
 }

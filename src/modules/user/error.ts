@@ -1,28 +1,26 @@
-import { t } from "@/libs/i18n";
-
 export class DeleteSelfError extends Error {
   readonly key: string;
 
   constructor(locale: string = "en") {
-    super(t(locale, "user.deleteSelf"));
-    this.key = "user.deleteSelf";
+    super("Can't delete your own account");
+    this.key = "SELF_DELETE";
   }
 }
 
 export class CreateSystemError extends Error {
   readonly key: string;
 
-  constructor(locale: string = "en") {
-    super(t(locale, "user.createSystemAdmin"));
-    this.key = "user.createSystemAdmin";
+  constructor() {
+    super("Can't add another system admin");
+    this.key = "CREATE_SYSTEM_ERROR";
   }
 }
 
 export class UpdateSystemError extends Error {
   readonly key: string;
 
-  constructor(locale: string = "en") {
-    super(t(locale, "user.updateSystemAdmin"));
-    this.key = "user.updateSystemAdmin";
+  constructor() {
+    super("Can't update system admin");
+    this.key = "UPDATE_SYSTEM_ERROR";
   }
 }

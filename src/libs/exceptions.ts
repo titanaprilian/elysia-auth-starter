@@ -1,19 +1,17 @@
-import { t } from "@/libs/i18n";
-
 export class AccountDisabledError extends Error {
   readonly key: string;
 
   constructor(locale: string = "en") {
-    super(t(locale, "auth.accountDisabled"));
-    this.key = "auth.accountDisabled";
+    super("Your Account is disabled");
+    this.key = "ACCOUNT_DISABLES";
   }
 }
 
 export class UnauthorizedError extends Error {
   readonly key: string;
 
-  constructor(locale: string = "en", key: string = "common.unauthorized") {
-    super(t(locale, key));
+  constructor(locale: string = "en", key: string = "UNAUTHRIZED") {
+    super("Unaithorized");
     this.key = key;
   }
 }

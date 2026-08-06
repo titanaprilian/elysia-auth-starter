@@ -6,8 +6,6 @@
     "build": "bun build src/server.ts --outdir dist --target bun --external @prisma/client",
     "start": "bun run dist/server.js",
     "test:setup": "dotenv -e .env.test -- prisma db push",
-    "test:unit": "bun test unit",
-    "test:int": "bun test integration",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

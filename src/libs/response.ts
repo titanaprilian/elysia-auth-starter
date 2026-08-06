@@ -1,6 +1,5 @@
 import { Context, t } from "elysia";
 import z, { ZodType } from "zod";
-import { t as translate, type Translator } from "@/libs/i18n";
 
 type ElysiaSet = Context["set"];
 
@@ -8,37 +7,19 @@ type MessageInput =
   | string
   | { key: string; params?: Record<string, string | number> };
 
-const resolveMessage = (
-  message: MessageInput,
-  locale: string,
-  translator?: Translator,
-): string => {
-  if (typeof message === "string") {
-    if (translator) {
-      return translator(message);
-    }
-    return message;
-  }
-
-  const { key, params } = message;
-  return translate(locale, key, params);
-};
-
 export const successResponse = <T, E>(
   set: ElysiaSet,
   data: T,
   message: MessageInput = "Success",
   code: number = 200,
   extras?: E,
-  locale: string = "en",
 ) => {
   set.status = code;
-  const resolvedMessage = resolveMessage(message, locale);
 
   return {
     error: false,
     code,
-    message: resolvedMessage,
+    message,
     data,
     ...extras,
   } as any;
@@ -49,15 +30,13 @@ export const errorResponse = <TIssues = null>(
   code: number,
   message: MessageInput,
   issues: TIssues = null as unknown as TIssues,
-  locale: string = "en",
 ) => {
   set.status = code;
-  const resolvedMessage = resolveMessage(message, locale);
 
   return {
     error: true as const,
     code,
-    message: resolvedMessage,
+    message,
     issues,
   };
 };

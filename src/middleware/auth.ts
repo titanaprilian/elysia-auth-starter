@@ -2,16 +2,14 @@ import { prisma } from "@/libs/prisma";
 import { AccountDisabledError, UnauthorizedError } from "@libs/exceptions";
 import { accessJwt } from "@/plugins/jwt";
 import { Elysia } from "elysia";
-import { getLocale } from "@/libs/i18n";
 
 export const authMiddleware = new Elysia()
   .use(accessJwt)
   .derive(async ({ headers, accessJwt }) => {
-    const locale = getLocale(headers["accept-language"]);
     const auth = headers.authorization;
 
     if (!auth?.startsWith("Bearer ")) {
-      throw new UnauthorizedError(locale);
+      throw new UnauthorizedError();
     }
 
     const token = auth.slice(7);
@@ -22,7 +20,7 @@ export const authMiddleware = new Elysia()
       typeof payload.sub !== "string" ||
       typeof payload.tv !== "number"
     ) {
-      throw new UnauthorizedError(locale);
+      throw new UnauthorizedError();
     }
 
     const user = await prisma.user.findUnique({
@@ -36,15 +34,15 @@ export const authMiddleware = new Elysia()
     });
 
     if (!user) {
-      throw new UnauthorizedError(locale);
+      throw new UnauthorizedError();
     }
 
     if (!user.isActive) {
-      throw new AccountDisabledError(locale);
+      throw new AccountDisabledError();
     }
 
     if (user.tokenVersion !== payload.tv) {
-      throw new UnauthorizedError(locale);
+      throw new UnauthorizedError();
     }
 
     return {

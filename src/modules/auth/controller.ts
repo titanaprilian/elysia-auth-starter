@@ -39,7 +39,6 @@ export class AuthController {
     log,
     accessJwt,
     refreshJwt,
-    locale,
   }: {
     body: LoginInput;
     set: Context["set"];
@@ -47,18 +46,11 @@ export class AuthController {
     log: Logger;
     accessJwt: JwtSignVerify;
     refreshJwt: JwtSignVerify;
-    locale: string;
   }) {
-    const user = await AuthService.login(body, log, locale);
+    const user = await AuthService.login(body, log);
 
     if (!user) {
-      return errorResponse(
-        set,
-        401,
-        { key: "auth.invalidCredentials" },
-        null,
-        locale,
-      );
+      return errorResponse(set, 401, { key: "auth.invalidCredentials" }, null);
     }
 
     const tokenId = await AuthService.createRefreshToken(user.id);
@@ -94,7 +86,6 @@ export class AuthController {
       { key: "auth.loginSuccess" },
       200,
       undefined,
-      locale,
     );
   }
 
@@ -105,7 +96,6 @@ export class AuthController {
     log,
     accessJwt,
     refreshJwt,
-    locale,
   }: {
     body: { refresh_token?: string };
     set: Context["set"];
@@ -113,19 +103,12 @@ export class AuthController {
     log: Logger;
     accessJwt: JwtSignVerify;
     refreshJwt: JwtSignVerify;
-    locale: string;
   }) {
     const incomingRefreshToken =
       cookie.refresh_token.value || body.refresh_token;
 
     if (!incomingRefreshToken) {
-      return errorResponse(
-        set,
-        400,
-        { key: "auth.tokenRequired" },
-        null,
-        locale,
-      );
+      return errorResponse(set, 400, { key: "auth.tokenRequired" }, null);
     }
 
     const payload = await refreshJwt.verify(incomingRefreshToken as string);
@@ -136,13 +119,7 @@ export class AuthController {
       typeof payload.sub !== "string" ||
       typeof payload.tv !== "number"
     ) {
-      return errorResponse(
-        set,
-        401,
-        { key: "auth.refreshFailed" },
-        null,
-        locale,
-      );
+      return errorResponse(set, 401, { key: "auth.refreshFailed" }, null);
     }
 
     const data = await AuthService.refresh({
@@ -150,7 +127,6 @@ export class AuthController {
       userId: payload.sub,
       tokenVersion: payload.tv,
       log,
-      locale,
     });
 
     const newAccessToken = await accessJwt.sign({
@@ -180,7 +156,6 @@ export class AuthController {
       { key: "auth.refreshSuccess" },
       200,
       undefined,
-      locale,
     );
   }
 
@@ -190,14 +165,12 @@ export class AuthController {
     log,
     cookie,
     refreshJwt,
-    locale,
   }: {
     body: { refresh_token?: string };
     set: Context["set"];
     log: Logger;
     cookie: Context["cookie"];
     refreshJwt: JwtSignVerify;
-    locale: string;
   }) {
     const incomingRefreshToken =
       cookie.refresh_token.value || body.refresh_token;
@@ -226,7 +199,6 @@ export class AuthController {
       { key: "auth.logoutSuccess" },
       200,
       undefined,
-      locale,
     );
   }
 
@@ -237,7 +209,6 @@ export class AuthController {
     cookie,
     set,
     refreshJwt,
-    locale,
   }: {
     user: { id: string; tokenVersion: number };
     body: { refresh_token?: string };
@@ -245,49 +216,29 @@ export class AuthController {
     cookie: Context["cookie"];
     set: Context["set"];
     refreshJwt: JwtSignVerify;
-    locale: string;
   }) {
     const incomingRefreshToken =
       cookie.refresh_token.value || body.refresh_token;
 
     if (!incomingRefreshToken) {
-      return errorResponse(
-        set,
-        400,
-        { key: "auth.tokenRequired" },
-        null,
-        locale,
-      );
+      return errorResponse(set, 400, { key: "auth.tokenRequired" }, null);
     }
 
     const payload = await refreshJwt.verify(incomingRefreshToken as string);
 
     if (!payload || !payload.jti || typeof payload.sub !== "string") {
-      return errorResponse(
-        set,
-        401,
-        { key: "auth.invalidToken" },
-        null,
-        locale,
-      );
+      return errorResponse(set, 401, { key: "auth.invalidToken" }, null);
     }
 
     // This prevents User A from using their Access Token to revoke User B's session
     if (payload.sub !== user.id) {
-      return errorResponse(
-        set,
-        403,
-        { key: "auth.invalidToken" },
-        null,
-        locale,
-      );
+      return errorResponse(set, 403, { key: "auth.invalidToken" }, null);
     }
 
     await AuthService.logoutAll({
       userId: user.id,
       requestingTokenId: payload.jti,
       log,
-      locale,
     });
 
     cookie.refresh_token.set({
@@ -302,7 +253,6 @@ export class AuthController {
       { key: "auth.logoutAllSuccess" },
       200,
       undefined,
-      locale,
     );
   }
 
@@ -310,14 +260,12 @@ export class AuthController {
     user,
     log,
     set,
-    locale,
   }: {
     user: { id: string; tokenVersion: number };
     log: Logger;
     set: Context["set"];
-    locale: string;
   }) {
-    const data = await AuthService.me(user.id, log, locale);
+    const data = await AuthService.me(user.id, log);
 
     return successResponse(
       set,
@@ -332,7 +280,6 @@ export class AuthController {
       { key: "user.getSuccess" },
       200,
       undefined,
-      locale,
     );
   }
 }

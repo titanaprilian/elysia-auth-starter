@@ -1,7 +1,6 @@
 import { Elysia, type ElysiaConfig } from "elysia";
 import { loggerMiddleware } from "@/middleware/logger";
 import { authMiddleware } from "@/middleware/auth";
-import { i18nMiddleware } from "@/middleware/i18n";
 import { errorResponse } from "./response";
 import { AccountDisabledError, UnauthorizedError } from "./exceptions";
 
@@ -15,8 +14,7 @@ export const createBaseApp = <Prefix extends string = "">(
   config?: ElysiaConfig<Prefix>,
 ) =>
   new Elysia(config)
-    .use(i18nMiddleware)
-    .onError(({ code, error, set, locale }) => {
+    .onError(({ code, error, set }) => {
       if (
         code === "UNKNOWN" &&
         (error.message.startsWith("String must be") ||
@@ -40,7 +38,6 @@ export const createBaseApp = <Prefix extends string = "">(
               message: error.message,
             },
           ],
-          locale,
         );
       }
 
@@ -70,20 +67,19 @@ export const createBaseApp = <Prefix extends string = "">(
           400,
           { key: "common.badRequest", params: { field: "validation" } },
           issues,
-          locale,
         );
       }
 
       if (error instanceof UnauthorizedError) {
         const key =
           (error as unknown as { key: string }).key || "common.unauthorized";
-        return errorResponse(set, 401, { key }, null, locale);
+        return errorResponse(set, 401, { key }, null);
       }
 
       if (error instanceof AccountDisabledError) {
         const key =
           (error as unknown as { key: string }).key || "auth.accountDisabled";
-        return errorResponse(set, 403, { key }, null, locale);
+        return errorResponse(set, 403, { key }, null);
       }
     })
     .use(loggerMiddleware)

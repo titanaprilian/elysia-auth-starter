@@ -6,7 +6,7 @@ import { env } from "@/config/env";
 import type { Logger } from "pino";
 
 export abstract class AuthService {
-  static async login(data: LoginInput, log: Logger, locale: string = "en") {
+  static async login(data: LoginInput, log: Logger) {
     const email = data.email.toLowerCase();
     log.debug({ email }, "Login attempt initiated");
 
@@ -26,7 +26,7 @@ export abstract class AuthService {
 
     if (!user.isActive) {
       log.warn({ email }, "Login failed: Account disabled");
-      throw new AccountDisabledError(locale);
+      throw new AccountDisabledError();
     }
 
     log.info({ userId: user.id, email }, "User logged in successfully");
@@ -58,13 +58,11 @@ export abstract class AuthService {
     tokenVersion,
     refreshToken,
     log,
-    locale = "en",
   }: {
     userId: string;
     tokenVersion: number;
     refreshToken: string;
     log: Logger;
-    locale?: string;
   }) {
     log.debug({ userId }, "Refresh token flow initiated");
 
@@ -76,7 +74,7 @@ export abstract class AuthService {
     if (!storedToken) {
       // This might be a client bug or a brute-force attempt
       log.warn({ userId }, "Refresh failed: Token not found in DB");
-      throw new UnauthorizedError(locale, "auth.refreshFailed");
+      throw new UnauthorizedError("auth.refreshFailed");
     }
 
     // Reuse detection
@@ -99,7 +97,7 @@ export abstract class AuthService {
         }),
       ]);
 
-      throw new UnauthorizedError(locale, "auth.tokenBlacklisted");
+      throw new UnauthorizedError("auth.tokenBlacklisted");
     }
 
     // Expiration check
@@ -109,14 +107,14 @@ export abstract class AuthService {
         { userId, tokenId: storedToken.id, expiresAt: storedToken.expiresAt },
         "Refresh failed: Token expired",
       );
-      throw new UnauthorizedError(locale, "auth.refreshFailed");
+      throw new UnauthorizedError("auth.refreshFailed");
     }
     const user = storedToken.user;
 
     // User validation
     if (!user.isActive) {
       log.warn({ userId }, "Refresh failed: Account is disabled");
-      throw new AccountDisabledError(locale);
+      throw new AccountDisabledError();
     }
 
     if (user.tokenVersion !== tokenVersion) {
@@ -128,7 +126,7 @@ export abstract class AuthService {
         },
         "Refresh failed: Version mismatch (Password changed or Logout All)",
       );
-      throw new UnauthorizedError(locale, "auth.invalidToken");
+      throw new UnauthorizedError("auth.invalidToken");
     }
 
     // Rotate refresh token and calculate duration
